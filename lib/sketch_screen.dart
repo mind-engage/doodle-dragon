@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'dart:ui' as ui;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class SketchScreen extends StatefulWidget {
+  final String apiKey;
+  const SketchScreen({super.key, required this.apiKey});
+
   @override
   _SketchScreenState createState() => _SketchScreenState();
 }
@@ -28,8 +31,7 @@ class _SketchScreenState extends State<SketchScreen> {
         onPanUpdate: (details) {
           setState(() {
             RenderBox renderBox = context.findRenderObject() as RenderBox;
-            //var appBarHeight = Scaffold.of(context).appBarMaxHeight ?? 0;
-            const double appBarHeight = 56.0;
+            const double appBarHeight = 56.0; // Standard AppBar height
             Offset adjustedPosition = Offset(details.globalPosition.dx, details.globalPosition.dy - appBarHeight);
             Offset localPosition = renderBox.globalToLocal(adjustedPosition);
             points.add(localPosition);
@@ -46,8 +48,31 @@ class _SketchScreenState extends State<SketchScreen> {
     );
   }
 
-  void takeSnapshotAndUpload(BuildContext context) {
-    // Implement snapshot capture and upload functionality
+  void takeSnapshotAndUpload(BuildContext context) async {
+    List<Map<String, dynamic>> jsonPoints = points.where((p) => p != null).map(
+            (p) => {'x': p!.dx, 'y': p!.dy}
+    ).toList();
+
+    String jsonBody = jsonEncode({
+      'contents': [{
+        'parts': [{
+          'text': 'Predict and complete this sketch based on the following points: $jsonPoints'
+        }]
+      }]
+    });
+
+    var response = await http.post(
+      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.apiKey}'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonBody,
+    );
+
+    if (response.statusCode == 200) {
+      // Parse the response and update your sketch or UI here
+      print("Response from model: ${response.body}");
+    } else {
+      print("Failed to get response: ${response.body}");
+    }
   }
 }
 

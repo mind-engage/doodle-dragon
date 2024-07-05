@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'sketch_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future main() async {
+  await dotenv.load(fileName: "dotenv");
   runApp(DoodleDragon());
 }
 
@@ -16,6 +18,7 @@ class DoodleDragon extends StatelessWidget {
 }
 
 class HomeScreen extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,7 +36,7 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SketchScreen()),
+                  MaterialPageRoute(builder: (context) => SketchScreen(apiKey: dotenv.get('GEMINI_API_KEY', fallback: ''))),
                 );
               },
             ),
