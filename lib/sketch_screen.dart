@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 
+enum FeedbackMode { ChildArt, AdultArt, DesignFeedback }
+
 class SketchScreen extends StatefulWidget {
   final String apiKey;
   const SketchScreen({super.key, required this.apiKey});
@@ -16,6 +18,14 @@ class SketchScreen extends StatefulWidget {
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
   GlobalKey repaintBoundaryKey = GlobalKey();
+  FeedbackMode selectedMode = FeedbackMode.ChildArt; // Default feedback mode
+
+  // Map to hold prompts for each feedback mode
+  Map<FeedbackMode, String> prompts = {
+    FeedbackMode.ChildArt: "The attached sketch is drawn by a child. Analyze and suggest the child how to improve further. The output is used to play to child using text to speech",
+    FeedbackMode.AdultArt: "Review this artistic piece by an adult for professional improvement.",
+    FeedbackMode.DesignFeedback: "Provide feedback on the design elements of the attached sketch."
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -31,29 +41,54 @@ class _SketchScreenState extends State<SketchScreen> {
           ),
         ],
       ),
-      body: GestureDetector(
-        onPanUpdate: (details) {
-          setState(() {
-            RenderBox renderBox = context.findRenderObject() as RenderBox;
-            double appBarHeight = AppBar().preferredSize.height;
-            double topPadding = MediaQuery.of(context).padding.top;
+      body: Column(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  double appBarHeight = AppBar().preferredSize.height;
+                  double topPadding = MediaQuery.of(context).padding.top;
 
-            Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
-            Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                  Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
+                  Offset localPosition = renderBox.globalToLocal(adjustedPosition);
 
-            points.add(localPosition);
-          });
-        },
-        onPanEnd: (details) {
-          points.add(null);
-        },
-        child: RepaintBoundary(
-          key: repaintBoundaryKey,
-          child: CustomPaint(
-            painter: SketchPainter(points),
-            child: Container(),
+                  points.add(localPosition);
+                });
+              },
+              onPanEnd: (details) {
+                points.add(null);
+              },
+              child: RepaintBoundary(
+                key: repaintBoundaryKey,
+                child: CustomPaint(
+                  painter: SketchPainter(points),
+                  child: Container(),
+                ),
+              ),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButton<FeedbackMode>(
+              value: selectedMode,
+              onChanged: (FeedbackMode? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedMode = newValue;
+                  });
+                }
+              },
+              items: FeedbackMode.values.map((FeedbackMode mode) {
+                return DropdownMenuItem<FeedbackMode>(
+                  value: mode,
+                  child: Text(mode.toString().split('.').last),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -69,17 +104,16 @@ class _SketchScreenState extends State<SketchScreen> {
 
   void takeSnapshotAndUpload(BuildContext context) async {
     String base64String = await capturePng();
+    String promptText = prompts[selectedMode]!;
     String jsonBody = jsonEncode({
       "contents": [
         { "parts": [
-          {"text": "The attached sketch is drawn by a child. Analyze and suggest him how to improve further"},
+          {"text": promptText},
           { "inlineData": {
             "mimeType": "image/png",
             "data": base64String
-          }
-          }
-        ]
-        }
+          }}
+        ]}
       ]
     });
 
@@ -105,7 +139,7 @@ class SketchPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white); // Set canvas background color to white
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
     Paint paint = Paint()
       ..color = Colors.black
       ..strokeCap = StrokeCap.round
