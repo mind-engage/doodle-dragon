@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 
 class SketchScreen extends StatefulWidget {
@@ -12,6 +15,7 @@ class SketchScreen extends StatefulWidget {
 
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
+  GlobalKey repaintBoundaryKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +38,6 @@ class _SketchScreenState extends State<SketchScreen> {
             double appBarHeight = AppBar().preferredSize.height;
             double topPadding = MediaQuery.of(context).padding.top;
 
-            // Adjust for app bar height before converting to local coordinates
             Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
             Offset localPosition = renderBox.globalToLocal(adjustedPosition);
 
@@ -44,25 +47,40 @@ class _SketchScreenState extends State<SketchScreen> {
         onPanEnd: (details) {
           points.add(null);
         },
-        child: CustomPaint(
-          painter: SketchPainter(points),
-          child: Container(),
+        child: RepaintBoundary(
+          key: repaintBoundaryKey,
+          child: CustomPaint(
+            painter: SketchPainter(points),
+            child: Container(),
+          ),
         ),
       ),
     );
   }
 
-  void takeSnapshotAndUpload(BuildContext context) async {
-    List<Map<String, dynamic>> jsonPoints = points.where((p) => p != null).map(
-            (p) => {'x': p!.dx, 'y': p!.dy}
-    ).toList();
+  Future<String> capturePng() async {
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    Uint8List pngBytes = byteData!.buffer.asUint8List();
+    String base64String = base64Encode(pngBytes);
+    return base64String;
+  }
 
+  void takeSnapshotAndUpload(BuildContext context) async {
+    String base64String = await capturePng();
     String jsonBody = jsonEncode({
-      'contents': [{
-        'parts': [{
-          'text': 'Predict and complete this sketch based on the following points: $jsonPoints'
-        }]
-      }]
+      "contents": [
+        { "parts": [
+          {"text": "The attached sketch is drawn by a child. Analyze and suggest him how to improve further"},
+          { "inlineData": {
+            "mimeType": "image/png",
+            "data": base64String
+          }
+          }
+        ]
+        }
+      ]
     });
 
     var response = await http.post(
@@ -72,9 +90,10 @@ class _SketchScreenState extends State<SketchScreen> {
     );
 
     if (response.statusCode == 200) {
-      // Parse the response and update your sketch or UI here
+      // Handle successful response
       print("Response from model: ${response.body}");
     } else {
+      // Handle error response
       print("Failed to get response: ${response.body}");
     }
   }
