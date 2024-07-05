@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
 enum FeedbackMode { ChildArt, AdultArt, DesignFeedback }
@@ -18,7 +19,8 @@ class SketchScreen extends StatefulWidget {
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
   GlobalKey repaintBoundaryKey = GlobalKey();
-  FeedbackMode selectedMode = FeedbackMode.ChildArt; // Default feedback mode
+  FeedbackMode selectedMode = FeedbackMode.ChildArt;
+  FlutterTts flutterTts = FlutterTts();
 
   // Map to hold prompts for each feedback mode
   Map<FeedbackMode, String> prompts = {
@@ -26,6 +28,13 @@ class _SketchScreenState extends State<SketchScreen> {
     FeedbackMode.AdultArt: "Review this artistic piece by an adult for professional improvement.",
     FeedbackMode.DesignFeedback: "Provide feedback on the design elements of the attached sketch."
   };
+
+  @override
+  void initState() {
+    super.initState();
+    flutterTts.setLanguage("en-US");
+    flutterTts.setSpeechRate(0.5);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +45,7 @@ class _SketchScreenState extends State<SketchScreen> {
           IconButton(
             icon: Icon(Icons.save),
             onPressed: () {
-              takeSnapshotAndUpload(context);
+              takeSnapshotAndAnalyze(context);
             },
           ),
         ],
@@ -102,7 +111,12 @@ class _SketchScreenState extends State<SketchScreen> {
     return base64String;
   }
 
-  void takeSnapshotAndUpload(BuildContext context) async {
+  bool isContentSafe(Map<String, dynamic> candidate) {
+    List<dynamic> safetyRatings = candidate['safetyRatings'];
+    return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
+  }
+
+  void takeSnapshotAndAnalyze(BuildContext context) async {
     String base64String = await capturePng();
     String promptText = prompts[selectedMode]!;
     String jsonBody = jsonEncode({
@@ -124,11 +138,24 @@ class _SketchScreenState extends State<SketchScreen> {
     );
 
     if (response.statusCode == 200) {
-      // Handle successful response
-      print("Response from model: ${response.body}");
+      Map<String, dynamic> decodedResponse = jsonDecode(response.body);
+      Map<String, dynamic> candidate = decodedResponse['candidates'][0];
+      if (isContentSafe(candidate)) {
+        String responseText = candidate['content']['parts'][0]['text'];
+        _speak(responseText);
+        print("Response from model: $responseText");
+      } else {
+        print("Content is not safe for children.");
+      }
     } else {
-      // Handle error response
       print("Failed to get response: ${response.body}");
+    }
+  }
+
+
+  void _speak(String text) async {
+    if (text.isNotEmpty) {
+      await flutterTts.speak(text);
     }
   }
 }
