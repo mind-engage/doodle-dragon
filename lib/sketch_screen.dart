@@ -31,9 +31,13 @@ class _SketchScreenState extends State<SketchScreen> {
         onPanUpdate: (details) {
           setState(() {
             RenderBox renderBox = context.findRenderObject() as RenderBox;
-            const double appBarHeight = 56.0; // Standard AppBar height
-            Offset adjustedPosition = Offset(details.globalPosition.dx, details.globalPosition.dy - appBarHeight);
+            double appBarHeight = AppBar().preferredSize.height;
+            double topPadding = MediaQuery.of(context).padding.top;
+
+            // Adjust for app bar height before converting to local coordinates
+            Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
             Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+
             points.add(localPosition);
           });
         },
