@@ -28,7 +28,7 @@ class _SketchScreenState extends State<SketchScreen> {
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
 
-  String getPrompt(FeedbackMode mode) {
+  String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
       case FeedbackMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
@@ -37,7 +37,7 @@ class _SketchScreenState extends State<SketchScreen> {
                     As a model, you analyze and suggest missing elements yet to be drawn or modified.
                     Analyze the provided image of a child's drawing. Identify any common facial features that are missing. 
                     Provide a list of the missing element names and their estimated bounding boxes in the image
-                    The image has width $canvasWidth and height $canvasHeight.
+                    When calculating the bounding box coordinates, assume the image's width is $canvasWidth and height is $canvasHeight.
                     Use the following JSON format to represent your response:
 
                     ```json
@@ -164,15 +164,6 @@ class _SketchScreenState extends State<SketchScreen> {
     ),
   );
 
-  Future<String> capturePng() async {
-    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    Uint8List pngBytes = byteData!.buffer.asUint8List();
-    String base64String = base64Encode(pngBytes);
-    return base64String;
-  }
-
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
     return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
@@ -181,8 +172,20 @@ class _SketchScreenState extends State<SketchScreen> {
   void takeSnapshotAndAnalyze(BuildContext context) async {
     setState(() => isLoading = true);  // Set loading to true when starting the analysis
     try {
-      String base64String = await capturePng();
-      String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      // String base64String = await capturePng();
+      // Get the size of the boundary to pass to getPrompt
+      Size size = boundary.size;
+      double width = size.width;
+      double height = size.height;
+
+      String base64String = base64Encode(pngBytes);
+
+      String promptText = getPrompt(selectedMode, width, height); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
         "contents": [
           { "parts": [
