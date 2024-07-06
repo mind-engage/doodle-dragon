@@ -18,6 +18,9 @@ class SketchScreen extends StatefulWidget {
 
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
+  List<DrawingElement> missingElements = [];
+  bool showHints = false; // Flag to toggle hint visibility
+
   GlobalKey repaintBoundaryKey = GlobalKey();
   FeedbackMode selectedMode = FeedbackMode.Analysis;
   FlutterTts flutterTts = FlutterTts();
@@ -30,11 +33,24 @@ class _SketchScreenState extends State<SketchScreen> {
       case FeedbackMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
       case FeedbackMode.Hints:
-          return '''The attached sketch is drawn by a child. The agent captured the sketch as an image and send you the model.
+          return '''You are a helpful AI assistant that can analyze images of children's drawings and provide feedback..
                     As a model, you analyze and suggest missing elements yet to be drawn or modified.
-                    Give location of the missing elements so that the agent give the child visual feedback.
-                    The canvas has width $canvasWidth and height $canvasHeight.
-                    The hints for the missing elements should be in the format [{element: top-left-point, bottom-right-point},].
+                    Analyze the provided image of a child's drawing. Identify any common facial features that are missing. 
+                    Provide a list of the missing element names and their estimated bounding boxes in the image
+                    The image has width $canvasWidth and height $canvasHeight.
+                    Use the following JSON format to represent your response:
+
+                    ```json
+                    [{"element": "element_name", "bounds": [[x_min, y_min], [x_max, y_max]]}, ...]
+                    
+                    
+                  **Where:**
+                  
+                  * `"element_name"` is the name of the missing element (e.g., "hair", "ears", "eyebrows", "nose", leg, trunk, handle). 
+                  * `[x_min, y_min]` represents the top-left corner coordinates of the bounding box.
+                  * `[x_max, y_max]` represents the bottom-right corner coordinates of the bounding box.
+                  
+                  Ensure the bounding box coordinates are within the image's dimensions. You can assume the top-left corner of the image is at coordinates [0, 0].
                  ''';
 
       case FeedbackMode.DesignFeedback:
@@ -50,26 +66,31 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   List<DrawingElement> parseModelResponse(String response) {
-    // Regular expression to find the JSON part of the response
-    RegExp exp = RegExp(r'\[\{.*\}\]');
-    Match? match = exp.firstMatch(response);
-    if (match != null) {
-      String jsonPart = match.group(0)!; // Extract the JSON string
-      try {
-        // Decode the JSON string to a list of maps
-        List<dynamic> jsonData = json.decode(jsonPart);
-        // Convert each map to a DrawingElement object
-        List<DrawingElement> elements = jsonData.map((jsonItem) => DrawingElement.fromJson(jsonItem)).toList();
-        return elements;
-      } catch (e) {
-        print('Error parsing JSON: $e');
-        return [];
-      }
-    } else {
-      print('No JSON data found in response');
+    // Remove any non-JSON prefix like ```json
+    int startIndex = response.indexOf('[');  // Assuming the JSON always starts with an array
+    if (startIndex == -1) {
+      print("No JSON array found in response.");
+      return [];
+    }
+    // Assuming the JSON is well-formed and ends with ']', trim anything after the last ']'
+    int endIndex = response.lastIndexOf(']');
+    if (endIndex == -1 || endIndex < startIndex) {
+      print("Malformed JSON data.");
+      return [];
+    }
+    String jsonPart = response.substring(startIndex, endIndex + 1);
+
+    // Attempt to parse the trimmed JSON part
+    try {
+      List<dynamic> jsonData = json.decode(jsonPart);
+      List<DrawingElement> elements = jsonData.map((jsonItem) => DrawingElement.fromJson(jsonItem)).toList();
+      return elements;
+    } catch (e) {
+      print('Error parsing JSON: $e');
       return [];
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +98,14 @@ class _SketchScreenState extends State<SketchScreen> {
       appBar: AppBar(
         title: Text('Sketch'),
         actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.visibility),
+            onPressed: () {
+              setState(() {
+                showHints = !showHints;
+              });
+            },
+          ),
           IconButton(
             icon: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.save),  // Modify the icon based on isLoading
             onPressed: isLoading ? null : () => takeSnapshotAndAnalyze(context),  // Disable button when loading
@@ -107,7 +136,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points),
+              painter: SketchPainter(points, missingElements, showHints),
               child: Container(),
             ),
           ),
@@ -182,7 +211,11 @@ class _SketchScreenState extends State<SketchScreen> {
             print("Response from model: $responseText");
           } else {
             // TODO Overlay the hints;
-            List<DrawingElement> missingElements = parseModelResponse(responseText);
+            List<DrawingElement> newHints = parseModelResponse(responseText);
+            setState(() {
+              missingElements = newHints;
+              showHints = true; // Automatically show new hints
+            });
             print(responseText);
           }
         } else {
@@ -207,7 +240,10 @@ class _SketchScreenState extends State<SketchScreen> {
 
 class SketchPainter extends CustomPainter {
   final List<Offset?> points;
-  SketchPainter(this.points);
+  final List<DrawingElement> missingElements;
+  final bool showHints;
+
+  SketchPainter(this.points, this.missingElements, this.showHints);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -222,6 +258,23 @@ class SketchPainter extends CustomPainter {
         canvas.drawLine(points[i]!, points[i + 1]!, paint);
       }
     }
+
+    // Draw hints
+    if (showHints) {
+      Paint hintPaint = Paint()
+        ..color = Colors.red
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.0;
+      for (var element in missingElements) {
+        canvas.drawRect(
+          Rect.fromPoints(
+              Offset(element.topLeftPoint[0].toDouble(), element.topLeftPoint[1].toDouble()),
+              Offset(element.bottomRightPoint[0].toDouble(), element.bottomRightPoint[1].toDouble())
+          ),
+          hintPaint,
+        );
+      }
+    }
   }
 
   @override
@@ -233,13 +286,19 @@ class DrawingElement {
   List<int> topLeftPoint;
   List<int> bottomRightPoint;
 
-  DrawingElement({required this.element, required this.topLeftPoint, required this.bottomRightPoint});
+  DrawingElement({
+    required this.element,
+    required this.topLeftPoint,
+    required this.bottomRightPoint,
+  });
 
+  // Factory constructor to create a DrawingElement from a JSON map
   factory DrawingElement.fromJson(Map<String, dynamic> json) {
     return DrawingElement(
       element: json['element'],
-      topLeftPoint: List<int>.from(json['top-left-point']),
-      bottomRightPoint: List<int>.from(json['bottom-right-point']),
+      // Access the correct keys from the JSON
+      topLeftPoint: List<int>.from(json['bounds'][0]),
+      bottomRightPoint: List<int>.from(json['bounds'][1]),
     );
   }
 }
