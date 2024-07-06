@@ -21,10 +21,10 @@ class _SketchScreenState extends State<SketchScreen> {
   GlobalKey repaintBoundaryKey = GlobalKey();
   FeedbackMode selectedMode = FeedbackMode.ChildArt;
   FlutterTts flutterTts = FlutterTts();
+  bool isLoading = false;  // Add a boolean state variable to track loading
 
-  // Map to hold prompts for each feedback mode
   Map<FeedbackMode, String> prompts = {
-    FeedbackMode.ChildArt: "The attached sketch is drawn by a child. Analyze and suggest the child how to improve further. The output is used to play to child using text to speech",
+    FeedbackMode.ChildArt: "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech",
     FeedbackMode.AdultArt: "Review this artistic piece by an adult for professional improvement.",
     FeedbackMode.DesignFeedback: "Provide feedback on the design elements of the attached sketch."
   };
@@ -43,64 +43,62 @@ class _SketchScreenState extends State<SketchScreen> {
         title: Text('Sketch'),
         actions: <Widget>[
           IconButton(
-            icon: Icon(Icons.save),
-            onPressed: () {
-              takeSnapshotAndAnalyze(context);
-            },
+            icon: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.save),  // Modify the icon based on isLoading
+            onPressed: isLoading ? null : () => takeSnapshotAndAnalyze(context),  // Disable button when loading
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                setState(() {
-                  RenderBox renderBox = context.findRenderObject() as RenderBox;
-                  double appBarHeight = AppBar().preferredSize.height;
-                  double topPadding = MediaQuery.of(context).padding.top;
-
-                  Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
-                  Offset localPosition = renderBox.globalToLocal(adjustedPosition);
-
-                  points.add(localPosition);
-                });
-              },
-              onPanEnd: (details) {
-                points.add(null);
-              },
-              child: RepaintBoundary(
-                key: repaintBoundaryKey,
-                child: CustomPaint(
-                  painter: SketchPainter(points),
-                  child: Container(),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: DropdownButton<FeedbackMode>(
-              value: selectedMode,
-              onChanged: (FeedbackMode? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    selectedMode = newValue;
-                  });
-                }
-              },
-              items: FeedbackMode.values.map((FeedbackMode mode) {
-                return DropdownMenuItem<FeedbackMode>(
-                  value: mode,
-                  child: Text(mode.toString().split('.').last),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+      body: buildBody(),
     );
   }
+
+  Widget buildBody() => Column(
+    children: [
+      Expanded(
+        child: GestureDetector(
+          onPanUpdate: (details) {
+            setState(() {
+              RenderBox renderBox = context.findRenderObject() as RenderBox;
+              double appBarHeight = AppBar().preferredSize.height;
+              double topPadding = MediaQuery.of(context).padding.top;
+
+              Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
+              Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+
+              points.add(localPosition);
+            });
+          },
+          onPanEnd: (details) => setState(() => points.add(null)),
+          child: RepaintBoundary(
+            key: repaintBoundaryKey,
+            child: CustomPaint(
+              painter: SketchPainter(points),
+              child: Container(),
+            ),
+          ),
+        ),
+      ),
+      buildDropdown(),
+    ],
+  );
+
+  Widget buildDropdown() => Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: DropdownButton<FeedbackMode>(
+      value: selectedMode,
+      onChanged: (FeedbackMode? newValue) {
+        if (newValue != null) {
+          setState(() => selectedMode = newValue);
+        }
+      },
+      items: FeedbackMode.values.map((FeedbackMode mode) {
+        return DropdownMenuItem<FeedbackMode>(
+          value: mode,
+          child: Text(mode.toString().split('.').last),
+        );
+      }).toList(),
+    ),
+  );
 
   Future<String> capturePng() async {
     RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -117,41 +115,47 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   void takeSnapshotAndAnalyze(BuildContext context) async {
-    String base64String = await capturePng();
-    String promptText = prompts[selectedMode]!;
-    String jsonBody = jsonEncode({
-      "contents": [
-        { "parts": [
-          {"text": promptText},
-          { "inlineData": {
-            "mimeType": "image/png",
-            "data": base64String
-          }}
-        ]}
-      ]
-    });
+    setState(() => isLoading = true);  // Set loading to true when starting the analysis
+    try {
+      String base64String = await capturePng();
+      String promptText = prompts[selectedMode]!;
+      String jsonBody = jsonEncode({
+        "contents": [
+          { "parts": [
+            {"text": promptText},
+            { "inlineData": {
+              "mimeType": "image/png",
+              "data": base64String
+            }}
+          ]}
+        ]
+      });
 
-    var response = await http.post(
-      Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.apiKey}'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonBody,
-    );
+      var response = await http.post(
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.apiKey}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonBody,
+      );
 
-    if (response.statusCode == 200) {
-      Map<String, dynamic> decodedResponse = jsonDecode(response.body);
-      Map<String, dynamic> candidate = decodedResponse['candidates'][0];
-      if (isContentSafe(candidate)) {
-        String responseText = candidate['content']['parts'][0]['text'];
-        _speak(responseText);
-        print("Response from model: $responseText");
+      if (response.statusCode == 200) {
+        Map<String, dynamic> decodedResponse = jsonDecode(response.body);
+        Map<String, dynamic> candidate = decodedResponse['candidates'][0];
+        if (isContentSafe(candidate)) {
+          String responseText = candidate['content']['parts'][0]['text'];
+          _speak(responseText);
+          print("Response from model: $responseText");
+        } else {
+          print("Content is not safe for children.");
+          _speak("Sorry, content issue. Try again");
+        }
       } else {
-        print("Content is not safe for children.");
+        print("Failed to get response: ${response.body}");
+        _speak("Sorry, network issue. Try again");
       }
-    } else {
-      print("Failed to get response: ${response.body}");
+    } finally {
+      setState(() => isLoading = false);  // Reset loading state after operation completes
     }
   }
-
 
   void _speak(String text) async {
     if (text.isNotEmpty) {
