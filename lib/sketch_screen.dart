@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
-enum FeedbackMode { ChildArt, AdultArt, DesignFeedback }
+enum FeedbackMode { Analysis, Hints, DesignFeedback }
 
 class SketchScreen extends StatefulWidget {
   final String apiKey;
@@ -19,21 +19,56 @@ class SketchScreen extends StatefulWidget {
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
   GlobalKey repaintBoundaryKey = GlobalKey();
-  FeedbackMode selectedMode = FeedbackMode.ChildArt;
+  FeedbackMode selectedMode = FeedbackMode.Analysis;
   FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;  // Add a boolean state variable to track loading
+  final double canvasWidth = 1024;
+  final double canvasHeight = 1920;
 
-  Map<FeedbackMode, String> prompts = {
-    FeedbackMode.ChildArt: "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech",
-    FeedbackMode.AdultArt: "Review this artistic piece by an adult for professional improvement.",
-    FeedbackMode.DesignFeedback: "Provide feedback on the design elements of the attached sketch."
-  };
+  String getPrompt(FeedbackMode mode) {
+    switch (mode) {
+      case FeedbackMode.Analysis:
+        return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
+      case FeedbackMode.Hints:
+          return '''The attached sketch is drawn by a child. The agent captured the sketch as an image and send you the model.
+                    As a model, you analyze and suggest missing elements yet to be drawn or modified.
+                    Give location of the missing elements so that the agent give the child visual feedback.
+                    The canvas has width $canvasWidth and height $canvasHeight.
+                    The hints for the missing elements should be in the format [{element: top-left-point, bottom-right-point},].
+                 ''';
+
+      case FeedbackMode.DesignFeedback:
+        return "Provide feedback on the design elements of the attached sketch.";
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     flutterTts.setLanguage("en-US");
     flutterTts.setSpeechRate(0.5);
+  }
+
+  List<DrawingElement> parseModelResponse(String response) {
+    // Regular expression to find the JSON part of the response
+    RegExp exp = RegExp(r'\[\{.*\}\]');
+    Match? match = exp.firstMatch(response);
+    if (match != null) {
+      String jsonPart = match.group(0)!; // Extract the JSON string
+      try {
+        // Decode the JSON string to a list of maps
+        List<dynamic> jsonData = json.decode(jsonPart);
+        // Convert each map to a DrawingElement object
+        List<DrawingElement> elements = jsonData.map((jsonItem) => DrawingElement.fromJson(jsonItem)).toList();
+        return elements;
+      } catch (e) {
+        print('Error parsing JSON: $e');
+        return [];
+      }
+    } else {
+      print('No JSON data found in response');
+      return [];
+    }
   }
 
   @override
@@ -118,7 +153,7 @@ class _SketchScreenState extends State<SketchScreen> {
     setState(() => isLoading = true);  // Set loading to true when starting the analysis
     try {
       String base64String = await capturePng();
-      String promptText = prompts[selectedMode]!;
+      String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
         "contents": [
           { "parts": [
@@ -142,8 +177,14 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          _speak(responseText);
-          print("Response from model: $responseText");
+          if (selectedMode == FeedbackMode.Analysis) {
+            _speak(responseText);
+            print("Response from model: $responseText");
+          } else {
+            // TODO Overlay the hints;
+            List<DrawingElement> missingElements = parseModelResponse(responseText);
+            print(responseText);
+          }
         } else {
           print("Content is not safe for children.");
           _speak("Sorry, content issue. Try again");
@@ -185,4 +226,20 @@ class SketchPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class DrawingElement {
+  String element;
+  List<int> topLeftPoint;
+  List<int> bottomRightPoint;
+
+  DrawingElement({required this.element, required this.topLeftPoint, required this.bottomRightPoint});
+
+  factory DrawingElement.fromJson(Map<String, dynamic> json) {
+    return DrawingElement(
+      element: json['element'],
+      topLeftPoint: List<int>.from(json['top-left-point']),
+      bottomRightPoint: List<int>.from(json['bottom-right-point']),
+    );
+  }
 }
