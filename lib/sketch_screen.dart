@@ -221,26 +221,24 @@ class _SketchScreenState extends State<SketchScreen> {
             _speak(responseText);
             print("Response from model: $responseText");
           } else if (selectedMode == FeedbackMode.SketchToText){
-            print("Prompt for Text-to-Image: $responseText");
-            // Call your Python script (replace with your actual API call)
+            // Generate an image from a text prompt
             try {
-              var imageGenerationResponse = await http.post(
-                Uri.parse('http://your-python-server-ip:5000/generate-image'), // Replace with your API endpoint
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({'prompt': responseText}),
+              final imageResponse = await OpenAI.instance.image.create(
+                model: 'dall-e-3',
+                prompt: responseText,
+                n: 1,
+                responseFormat: OpenAIImageResponseFormat.b64Json,
               );
 
-              if (imageGenerationResponse.statusCode == 200) {
+              if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  generatedImage = imageGenerationResponse.bodyBytes;
+                  generatedImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
                 });
               } else {
-                // Handle errors from the image generation API
-                print('Failed to generate image: ${imageGenerationResponse.statusCode}');
-                print(imageGenerationResponse.body);
+                print('No image returned from the API');
               }
             } catch (e) {
-              print('Error calling image generation API: $e');
+              print('Error calling OpenAI image generation API: $e');
             }
           } else {
             // TODO Overlay the hints;
