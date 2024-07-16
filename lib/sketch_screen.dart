@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -5,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
+import 'package:dart_openai/dart_openai.dart';
 
 enum FeedbackMode { Analysis, Hints, DesignFeedback, SketchToText }
 
 class SketchScreen extends StatefulWidget {
-  final String apiKey;
-  const SketchScreen({super.key, required this.apiKey});
+  final String geminiApiKey;
+  final String openaiApiKey;
+  const SketchScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -27,6 +30,7 @@ class _SketchScreenState extends State<SketchScreen> {
   bool isLoading = false;
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
+  Uint8List? generatedImage;
 
   String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
@@ -66,6 +70,7 @@ class _SketchScreenState extends State<SketchScreen> {
     super.initState();
     flutterTts.setLanguage("en-US");
     flutterTts.setSpeechRate(0.5);
+    OpenAI.apiKey = widget.openaiApiKey;
   }
 
   List<DrawingElement> parseModelResponse(String response) {
@@ -202,7 +207,7 @@ class _SketchScreenState extends State<SketchScreen> {
       });
 
       var response = await http.post(
-        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.apiKey}'),
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -216,8 +221,27 @@ class _SketchScreenState extends State<SketchScreen> {
             _speak(responseText);
             print("Response from model: $responseText");
           } else if (selectedMode == FeedbackMode.SketchToText){
-            // TODO: Handle SketchToText output, probably display in a dialog or new screen
             print("Prompt for Text-to-Image: $responseText");
+            // Call your Python script (replace with your actual API call)
+            try {
+              var imageGenerationResponse = await http.post(
+                Uri.parse('http://your-python-server-ip:5000/generate-image'), // Replace with your API endpoint
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({'prompt': responseText}),
+              );
+
+              if (imageGenerationResponse.statusCode == 200) {
+                setState(() {
+                  generatedImage = imageGenerationResponse.bodyBytes;
+                });
+              } else {
+                // Handle errors from the image generation API
+                print('Failed to generate image: ${imageGenerationResponse.statusCode}');
+                print(imageGenerationResponse.body);
+              }
+            } catch (e) {
+              print('Error calling image generation API: $e');
+            }
           } else {
             // TODO Overlay the hints;
             List<DrawingElement> newHints = parseModelResponse(responseText);
