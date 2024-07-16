@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
-enum FeedbackMode { Analysis, Hints, DesignFeedback }
+enum FeedbackMode { Analysis, Hints, DesignFeedback, SketchToText }
 
 class SketchScreen extends StatefulWidget {
   final String apiKey;
@@ -19,12 +19,12 @@ class SketchScreen extends StatefulWidget {
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
   List<DrawingElement> missingElements = [];
-  bool showHints = false; // Flag to toggle hint visibility
+  bool showHints = false;
 
   GlobalKey repaintBoundaryKey = GlobalKey();
   FeedbackMode selectedMode = FeedbackMode.Analysis;
   FlutterTts flutterTts = FlutterTts();
-  bool isLoading = false;  // Add a boolean state variable to track loading
+  bool isLoading = false;
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
 
@@ -33,7 +33,7 @@ class _SketchScreenState extends State<SketchScreen> {
       case FeedbackMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
       case FeedbackMode.Hints:
-          return '''You are a helpful AI assistant that can analyze images of children's drawings and provide feedback..
+        return '''You are a helpful AI assistant that can analyze images of children's drawings and provide feedback..
                     As a model, you analyze and suggest missing elements yet to be drawn or modified.
                     Analyze the provided image of a child's drawing. Identify any common facial features that are missing. 
                     Provide a list of the missing element names and their estimated bounding boxes in the image
@@ -52,9 +52,12 @@ class _SketchScreenState extends State<SketchScreen> {
                   
                   Ensure the bounding box coordinates are within the image's dimensions. You can assume the top-left corner of the image is at coordinates [0, 0].
                  ''';
-
       case FeedbackMode.DesignFeedback:
         return "Provide feedback on the design elements of the attached sketch.";
+      case FeedbackMode.SketchToText:
+        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation.";
+      default:
+        return ""; // Handle any other cases or throw an error if needed
     }
   }
 
@@ -212,6 +215,9 @@ class _SketchScreenState extends State<SketchScreen> {
           if (selectedMode == FeedbackMode.Analysis) {
             _speak(responseText);
             print("Response from model: $responseText");
+          } else if (selectedMode == FeedbackMode.SketchToText){
+            // TODO: Handle SketchToText output, probably display in a dialog or new screen
+            print("Prompt for Text-to-Image: $responseText");
           } else {
             // TODO Overlay the hints;
             List<DrawingElement> newHints = parseModelResponse(responseText);
@@ -286,8 +292,8 @@ class SketchPainter extends CustomPainter {
 
 class DrawingElement {
   String element;
-  List<int> topLeftPoint;
-  List<int> bottomRightPoint;
+  List<double> topLeftPoint;
+  List<double> bottomRightPoint;
 
   DrawingElement({
     required this.element,
@@ -300,8 +306,8 @@ class DrawingElement {
     return DrawingElement(
       element: json['element'],
       // Access the correct keys from the JSON
-      topLeftPoint: List<int>.from(json['bounds'][0]),
-      bottomRightPoint: List<int>.from(json['bounds'][1]),
+      topLeftPoint: List<double>.from(json['bounds'][0]),
+      bottomRightPoint: List<double>.from(json['bounds'][1]),
     );
   }
 }
