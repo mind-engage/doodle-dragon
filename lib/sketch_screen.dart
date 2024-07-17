@@ -21,7 +21,6 @@ class SketchScreen extends StatefulWidget {
 
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
-  List<DrawingElement> missingElements = [];
   bool showHints = false;
 
   GlobalKey repaintBoundaryKey = GlobalKey();
@@ -143,7 +142,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, missingElements, showHints, generatedImage, boxFit),
+              painter: SketchPainter(points, showHints, generatedImage, boxFit),
               child: Container(),
             ),
           ),
@@ -269,14 +268,6 @@ class _SketchScreenState extends State<SketchScreen> {
             } catch (e) {
               print('Error calling OpenAI image generation API: $e');
             }
-          } else {
-            // TODO Overlay the hints;
-            List<DrawingElement> newHints = parseModelResponse(responseText);
-            setState(() {
-              missingElements = newHints;
-              showHints = true; // Automatically show new hints
-            });
-            print(responseText);
           }
         } else {
           print("Content is not safe for children.");
@@ -300,12 +291,11 @@ class _SketchScreenState extends State<SketchScreen> {
 
 class SketchPainter extends CustomPainter {
   final List<Offset?> points;
-  final List<DrawingElement> missingElements;
   final bool showHints;
   final ui.Image? image;
   final BoxFit boxFit;
 
-  SketchPainter(this.points, this.missingElements, this.showHints, this.image, this.boxFit);
+  SketchPainter(this.points, this.showHints, this.image, this.boxFit);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -323,23 +313,7 @@ class SketchPainter extends CustomPainter {
           fit: boxFit,
         );
       }
-
-      // Draw hints as red rectangles
-      Paint hintPaint = Paint()
-        ..color = Colors.red
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0;
-      for (var element in missingElements) {
-        canvas.drawRect(
-          Rect.fromPoints(
-              Offset(element.topLeftPoint[0].toDouble(), element.topLeftPoint[1].toDouble()),
-              Offset(element.bottomRightPoint[0].toDouble(), element.bottomRightPoint[1].toDouble())
-          ),
-          hintPaint,
-        );
-      }
     }
-
     // Draw the sketch
     Paint paint = Paint()
       ..color = Colors.black
