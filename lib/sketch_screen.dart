@@ -86,7 +86,9 @@ class _SketchScreenState extends State<SketchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sketch'),
+        title: Text('Doodle Dragon'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.clear),
