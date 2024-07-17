@@ -30,7 +30,7 @@ class _SketchScreenState extends State<SketchScreen> {
   bool isLoading = false;
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
-  Uint8List? generatedImage;
+  ui.Image? generatedImage;
 
   String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
@@ -144,7 +144,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, missingElements, showHints),
+              painter: SketchPainter(points, missingElements, showHints, generatedImage),
               child: Container(),
             ),
           ),
@@ -175,6 +175,14 @@ class _SketchScreenState extends State<SketchScreen> {
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
     return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
+  }
+
+  void decodeAndSetImage(Uint8List imageData) async {
+    final codec = await ui.instantiateImageCodec(imageData);
+    final frame = await codec.getNextFrame();
+    setState(() {
+      generatedImage = frame.image;
+    });
   }
 
   void takeSnapshotAndAnalyze(BuildContext context) async {
@@ -232,7 +240,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  generatedImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  Uint8List bytesImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  decodeAndSetImage(bytesImage!);
                 });
               } else {
                 print('No image returned from the API');
@@ -273,25 +282,40 @@ class SketchPainter extends CustomPainter {
   final List<Offset?> points;
   final List<DrawingElement> missingElements;
   final bool showHints;
+  final ui.Image? image;
 
-  SketchPainter(this.points, this.missingElements, this.showHints);
+
+  SketchPainter(this.points, this.missingElements, this.showHints, this.image);
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Draw the white background
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
+
+    // Draw the sketch
     Paint paint = Paint()
       ..color = Colors.black
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
-
     for (int i = 0; i < points.length - 1; i++) {
       if (points[i] != null && points[i + 1] != null) {
         canvas.drawLine(points[i]!, points[i + 1]!, paint);
       }
     }
 
-    // Draw hints
+    // Draw hints or the image overlay
     if (showHints) {
+      if (image != null) {
+        // Draw the image as an overlay if available
+        paintImage(
+          canvas: canvas,
+          rect: Rect.fromLTWH(0, 0, size.width, size.height),
+          image: image!,
+          fit: BoxFit.cover,
+        );
+      }
+
+      // Draw hints as red rectangles
       Paint hintPaint = Paint()
         ..color = Colors.red
         ..style = PaintingStyle.stroke
@@ -309,7 +333,7 @@ class SketchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant SketchPainter oldDelegate) => true;
 }
 
 class DrawingElement {
