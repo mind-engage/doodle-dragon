@@ -9,7 +9,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 
-enum FeedbackMode { Analysis, SketchToTrace, SketchToImage }
+enum AiMode { Analysis, ImageToTrace, SketchToImage }
 
 class SketchScreen extends StatefulWidget {
   final String geminiApiKey;
@@ -22,10 +22,10 @@ class SketchScreen extends StatefulWidget {
 
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
-  bool showHints = false;
+  bool showSketch = true;
 
   GlobalKey repaintBoundaryKey = GlobalKey();
-  FeedbackMode selectedMode = FeedbackMode.Analysis;
+  AiMode selectedMode = AiMode.Analysis;
   FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;
   final double canvasWidth = 1024;
@@ -34,13 +34,13 @@ class _SketchScreenState extends State<SketchScreen> {
   BoxFit boxFit = BoxFit.cover;  // Default value
   double _transparency = 1.0;  // Default transparency
 
-  String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
+  String getPrompt(AiMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
-      case FeedbackMode.Analysis:
+      case AiMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
-      case FeedbackMode.SketchToImage:
+      case AiMode.SketchToImage:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation.";
-      case FeedbackMode.SketchToTrace:
+      case AiMode.ImageToTrace:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generate image will be used to learn drawing by tracing over. Generate a suitable prompt with length below 1000 characters";
       default:
         return ""; // Handle any other cases or throw an error if needed
@@ -110,13 +110,9 @@ class _SketchScreenState extends State<SketchScreen> {
             icon: Icon(Icons.visibility),
             onPressed: () {
               setState(() {
-                showHints = !showHints;
+                showSketch = !showSketch;
               });
             },
-          ),
-          IconButton(
-            icon: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.engineering),  // Modify the icon based on isLoading
-            onPressed: isLoading ? null : () => takeSnapshotAndAnalyze(context),  // Disable button when loading
           ),
         ],
       ),
@@ -128,7 +124,47 @@ class _SketchScreenState extends State<SketchScreen> {
 
         child: Row(
           children: [
-            buildDropdown(),
+            PopupMenuButton<AiMode>(
+              // Replace with a more visually appealing mode selector for younger kids (e.g., large, tappable icons)
+              icon: Icon(Icons.brush, size: 40), //  Replace with a more appropriate icon (e.g., a palette)
+              iconColor: Colors.white,
+              onSelected: (AiMode newValue) {
+                setState(() => selectedMode = newValue);
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<AiMode>>[
+                const PopupMenuItem<AiMode>(
+                  value: AiMode.Analysis,
+                  child: Row(
+                    children: [
+                      Icon(Icons.analytics, color: Colors.red), // Replace with a custom icon representing 'analysis'
+                      SizedBox(width: 8),
+                      Text('Analyze'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<AiMode>(
+                  value: AiMode.ImageToTrace,
+                  child: Row(
+                    children: [
+                      Icon(Icons.notes, color: Colors.green,), // Replace with a custom icon representing 'tracing'
+                      SizedBox(width: 8),
+                      Text('Easy Trace'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<AiMode>(
+                  value: AiMode.SketchToImage,
+                  child: Row(
+                    children: [
+                      Icon(Icons.image, color:Colors.blue), // Replace with a custom icon representing 'image generation'
+                      SizedBox(width: 8),
+                      Text('Magic Background'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(width: 16), // Space between mode selector and slider
             Expanded(
               child: Slider(
                 value: _transparency,
@@ -150,7 +186,7 @@ class _SketchScreenState extends State<SketchScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => takeSnapshotAndAnalyze(context),
         tooltip: 'Analyze',
-        child: Icon(Icons.check),
+        child: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.engineering),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
@@ -176,32 +212,13 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, showHints, generatedImage, boxFit, _transparency),
+              painter: SketchPainter(points, showSketch, generatedImage, boxFit, _transparency),
               child: Container(),
             ),
           ),
         ),
       ),
     ],
-  );
-
-  Widget buildDropdown() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-    child: DropdownButton<FeedbackMode>(
-      //isExpanded: true,
-      value: selectedMode,
-      onChanged: (FeedbackMode? newValue) {
-        if (newValue != null) {
-          setState(() => selectedMode = newValue);
-        }
-      },
-      items: FeedbackMode.values.map((FeedbackMode mode) {
-        return DropdownMenuItem<FeedbackMode>(
-          value: mode,
-          child: Text(mode.toString().split('.').last),
-        );
-      }).toList(),
-    ),
   );
 
   bool isContentSafe(Map<String, dynamic> candidate) {
@@ -258,9 +275,9 @@ class _SketchScreenState extends State<SketchScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
-          if (selectedMode == FeedbackMode.Analysis) {
+          if (selectedMode == AiMode.Analysis) {
             _speak(responseText);
-          } else if (selectedMode == FeedbackMode.SketchToImage){
+          } else if (selectedMode == AiMode.SketchToImage){
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -281,7 +298,7 @@ class _SketchScreenState extends State<SketchScreen> {
             } catch (e) {
               print('Error calling OpenAI image generation API: $e');
             }
-          } else if (selectedMode == FeedbackMode.SketchToTrace){
+          } else if (selectedMode == AiMode.ImageToTrace){
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -325,12 +342,12 @@ class _SketchScreenState extends State<SketchScreen> {
 
 class SketchPainter extends CustomPainter {
   final List<Offset?> points;
-  final bool showHints;
+  final bool showSketch;
   final ui.Image? image;
   final BoxFit boxFit;
   final double transparency;
 
-  SketchPainter(this.points, this.showHints, this.image, this.boxFit, this.transparency);
+  SketchPainter(this.points, this.showSketch, this.image, this.boxFit, this.transparency);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -338,26 +355,27 @@ class SketchPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
 
     // Draw hints or the image overlay
-    if (showHints) {
-      if (image != null) {
-        // Draw the image as an overlay if available
-        paintImage(
-          canvas: canvas,
-          rect: Rect.fromLTWH(0, 0, size.width, size.height),
-          image: image!,
-          fit: boxFit,
-          colorFilter: ColorFilter.mode(Colors.white.withOpacity(transparency), BlendMode.dstIn),
-        );
-      }
+    if (image != null) {
+      // Draw the image as an overlay if available
+      paintImage(
+        canvas: canvas,
+        rect: Rect.fromLTWH(0, 0, size.width, size.height),
+        image: image!,
+        fit: boxFit,
+        colorFilter: ColorFilter.mode(Colors.white.withOpacity(transparency), BlendMode.dstIn),
+      );
     }
+
     // Draw the sketch
-    Paint paint = Paint()
-      ..color = Colors.black
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i] != null && points[i + 1] != null) {
-        canvas.drawLine(points[i]!, points[i + 1]!, paint);
+    if (showSketch) {
+      Paint paint = Paint()
+        ..color = Colors.black
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 5.0;
+      for (int i = 0; i < points.length - 1; i++) {
+        if (points[i] != null && points[i + 1] != null) {
+          canvas.drawLine(points[i]!, points[i + 1]!, paint);
+        }
       }
     }
   }
