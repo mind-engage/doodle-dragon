@@ -36,7 +36,8 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SketchScreen(apiKey: dotenv.get('GEMINI_API_KEY', fallback: ''))),
+                  MaterialPageRoute(builder: (context) => SketchScreen(geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''))),
                 );
               },
             ),

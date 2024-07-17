@@ -8,7 +8,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 
-enum FeedbackMode { Analysis, Hints, DesignFeedback, SketchToText }
+enum FeedbackMode { Analysis, SketchToTrace, SketchToImage }
 
 class SketchScreen extends StatefulWidget {
   final String geminiApiKey;
@@ -31,35 +31,16 @@ class _SketchScreenState extends State<SketchScreen> {
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
+  BoxFit boxFit = BoxFit.cover;  // Default value
 
   String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
       case FeedbackMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
-      case FeedbackMode.Hints:
-        return '''You are a helpful AI assistant that can analyze images of children's drawings and provide feedback..
-                    As a model, you analyze and suggest missing elements yet to be drawn or modified.
-                    Analyze the provided image of a child's drawing. Identify any common facial features that are missing. 
-                    Provide a list of the missing element names and their estimated bounding boxes in the image
-                    When calculating the bounding box coordinates, assume the image's width is $canvasWidth and height is $canvasHeight.
-                    Use the following JSON format to represent your response:
-
-                    ```json
-                    [{"element": "element_name", "bounds": [[x_min, y_min], [x_max, y_max]]}, ...]
-                    
-                    
-                  **Where:**
-                  
-                  * `"element_name"` is the name of the missing element (e.g., "hair", "ears", "eyebrows", "nose", leg, trunk, handle). 
-                  * `[x_min, y_min]` represents the top-left corner coordinates of the bounding box.
-                  * `[x_max, y_max]` represents the bottom-right corner coordinates of the bounding box.
-                  
-                  Ensure the bounding box coordinates are within the image's dimensions. You can assume the top-left corner of the image is at coordinates [0, 0].
-                 ''';
-      case FeedbackMode.DesignFeedback:
-        return "Provide feedback on the design elements of the attached sketch.";
-      case FeedbackMode.SketchToText:
+      case FeedbackMode.SketchToImage:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation.";
+      case FeedbackMode.SketchToTrace:
+        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generate image will be used to learn drawing by tracing over. Generate a suitable prompt";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -107,6 +88,24 @@ class _SketchScreenState extends State<SketchScreen> {
         title: Text('Sketch'),
         actions: <Widget>[
           IconButton(
+            icon: Icon(Icons.clear),
+            onPressed: () {
+              setState(() {
+                points.clear();  // Clear all points
+              });
+            },
+            tooltip: 'Clear Sketch',
+          ),
+          IconButton(
+            icon: Icon(Icons.aspect_ratio),
+            onPressed: () {
+              setState(() {
+                boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
+              });
+            },
+            tooltip: 'Toggle BoxFit',
+          ),
+          IconButton(
             icon: Icon(Icons.visibility),
             onPressed: () {
               setState(() {
@@ -115,7 +114,7 @@ class _SketchScreenState extends State<SketchScreen> {
             },
           ),
           IconButton(
-            icon: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.save),  // Modify the icon based on isLoading
+            icon: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.engineering),  // Modify the icon based on isLoading
             onPressed: isLoading ? null : () => takeSnapshotAndAnalyze(context),  // Disable button when loading
           ),
         ],
@@ -144,7 +143,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, missingElements, showHints, generatedImage),
+              painter: SketchPainter(points, missingElements, showHints, generatedImage, boxFit),
               child: Container(),
             ),
           ),
@@ -225,14 +224,35 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
+          print("Response from model: $responseText");
           if (selectedMode == FeedbackMode.Analysis) {
             _speak(responseText);
-            print("Response from model: $responseText");
-          } else if (selectedMode == FeedbackMode.SketchToText){
+          } else if (selectedMode == FeedbackMode.SketchToImage){
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
                 model: 'dall-e-3',
+                prompt: responseText,
+                n: 1,
+                responseFormat: OpenAIImageResponseFormat.b64Json,
+              );
+
+              if (imageResponse.data.isNotEmpty) {
+                setState(() {
+                  Uint8List bytesImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  decodeAndSetImage(bytesImage!);
+                });
+              } else {
+                print('No image returned from the API');
+              }
+            } catch (e) {
+              print('Error calling OpenAI image generation API: $e');
+            }
+          } else if (selectedMode == FeedbackMode.SketchToTrace){
+            // Generate an image from a text prompt
+            try {
+              final imageResponse = await OpenAI.instance.image.create(
+                model: 'dall-e-2',
                 prompt: responseText,
                 n: 1,
                 responseFormat: OpenAIImageResponseFormat.b64Json,
@@ -283,9 +303,9 @@ class SketchPainter extends CustomPainter {
   final List<DrawingElement> missingElements;
   final bool showHints;
   final ui.Image? image;
+  final BoxFit boxFit;
 
-
-  SketchPainter(this.points, this.missingElements, this.showHints, this.image);
+  SketchPainter(this.points, this.missingElements, this.showHints, this.image, this.boxFit);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -311,7 +331,7 @@ class SketchPainter extends CustomPainter {
           canvas: canvas,
           rect: Rect.fromLTWH(0, 0, size.width, size.height),
           image: image!,
-          fit: BoxFit.cover,
+          fit: boxFit,
         );
       }
 
