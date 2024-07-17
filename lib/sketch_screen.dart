@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -31,6 +32,7 @@ class _SketchScreenState extends State<SketchScreen> {
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
   BoxFit boxFit = BoxFit.cover;  // Default value
+  double _transparency = 1.0;  // Default transparency
 
   String getPrompt(FeedbackMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
@@ -123,7 +125,27 @@ class _SketchScreenState extends State<SketchScreen> {
 
         shape: CircularNotchedRectangle(),
         color: Theme.of(context).primaryColor,
-        child: buildDropdown(),
+
+        child: Row(
+          children: [
+            buildDropdown(),
+            Expanded(
+              child: Slider(
+                value: _transparency,
+                min: 0.0,
+                max: 1.0,
+                divisions: 10,
+                activeColor: Colors.white,
+                label: "${(_transparency * 100).toStringAsFixed(0)}%",
+                onChanged: (double value) {
+                  setState(() {
+                    _transparency = value;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => takeSnapshotAndAnalyze(context),
@@ -154,7 +176,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, showHints, generatedImage, boxFit),
+              painter: SketchPainter(points, showHints, generatedImage, boxFit, _transparency),
               child: Container(),
             ),
           ),
@@ -166,7 +188,7 @@ class _SketchScreenState extends State<SketchScreen> {
   Widget buildDropdown() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
     child: DropdownButton<FeedbackMode>(
-      isExpanded: true,
+      //isExpanded: true,
       value: selectedMode,
       onChanged: (FeedbackMode? newValue) {
         if (newValue != null) {
@@ -306,8 +328,9 @@ class SketchPainter extends CustomPainter {
   final bool showHints;
   final ui.Image? image;
   final BoxFit boxFit;
+  final double transparency;
 
-  SketchPainter(this.points, this.showHints, this.image, this.boxFit);
+  SketchPainter(this.points, this.showHints, this.image, this.boxFit, this.transparency);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -323,6 +346,7 @@ class SketchPainter extends CustomPainter {
           rect: Rect.fromLTWH(0, 0, size.width, size.height),
           image: image!,
           fit: boxFit,
+          colorFilter: ColorFilter.mode(Colors.white.withOpacity(transparency), BlendMode.dstIn),
         );
       }
     }
