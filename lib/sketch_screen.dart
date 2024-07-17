@@ -312,17 +312,6 @@ class SketchPainter extends CustomPainter {
     // Draw the white background
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
 
-    // Draw the sketch
-    Paint paint = Paint()
-      ..color = Colors.black
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i] != null && points[i + 1] != null) {
-        canvas.drawLine(points[i]!, points[i + 1]!, paint);
-      }
-    }
-
     // Draw hints or the image overlay
     if (showHints) {
       if (image != null) {
@@ -348,6 +337,17 @@ class SketchPainter extends CustomPainter {
           ),
           hintPaint,
         );
+      }
+    }
+
+    // Draw the sketch
+    Paint paint = Paint()
+      ..color = Colors.black
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.0;
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i] != null && points[i + 1] != null) {
+        canvas.drawLine(points[i]!, points[i + 1]!, paint);
       }
     }
   }
