@@ -119,6 +119,18 @@ class _SketchScreenState extends State<SketchScreen> {
         ],
       ),
       body: buildBody(),
+      bottomNavigationBar: BottomAppBar(
+
+        shape: CircularNotchedRectangle(),
+        color: Theme.of(context).primaryColor,
+        child: buildDropdown(),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => takeSnapshotAndAnalyze(context),
+        tooltip: 'Analyze',
+        child: Icon(Icons.check),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -148,13 +160,13 @@ class _SketchScreenState extends State<SketchScreen> {
           ),
         ),
       ),
-      buildDropdown(),
     ],
   );
 
-  Widget buildDropdown() => Padding(
-    padding: const EdgeInsets.all(8.0),
+  Widget buildDropdown() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
     child: DropdownButton<FeedbackMode>(
+      isExpanded: true,
       value: selectedMode,
       onChanged: (FeedbackMode? newValue) {
         if (newValue != null) {
