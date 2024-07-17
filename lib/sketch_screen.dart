@@ -39,7 +39,7 @@ class _SketchScreenState extends State<SketchScreen> {
       case FeedbackMode.SketchToImage:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation.";
       case FeedbackMode.SketchToTrace:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generate image will be used to learn drawing by tracing over. Generate a suitable prompt";
+        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generate image will be used to learn drawing by tracing over. Generate a suitable prompt with length below 1000 characters";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
