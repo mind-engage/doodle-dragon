@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
@@ -31,8 +32,8 @@ class _SketchScreenState extends State<SketchScreen> {
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  BoxFit boxFit = BoxFit.cover;  // Default value
-  double _transparency = 1.0;  // Default transparency
+  BoxFit boxFit = BoxFit.cover; // Default value
+  double _transparency = 1.0; // Default transparency
 
   String getPrompt(AiMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
@@ -55,35 +56,10 @@ class _SketchScreenState extends State<SketchScreen> {
     OpenAI.apiKey = widget.openaiApiKey;
   }
 
-  List<DrawingElement> parseModelResponse(String response) {
-    // Remove any non-JSON prefix like ```json
-    int startIndex = response.indexOf('[');  // Assuming the JSON always starts with an array
-    if (startIndex == -1) {
-      print("No JSON array found in response.");
-      return [];
-    }
-    // Assuming the JSON is well-formed and ends with ']', trim anything after the last ']'
-    int endIndex = response.lastIndexOf(']');
-    if (endIndex == -1 || endIndex < startIndex) {
-      print("Malformed JSON data.");
-      return [];
-    }
-    String jsonPart = response.substring(startIndex, endIndex + 1);
-
-    // Attempt to parse the trimmed JSON part
-    try {
-      List<dynamic> jsonData = json.decode(jsonPart);
-      List<DrawingElement> elements = jsonData.map((jsonItem) => DrawingElement.fromJson(jsonItem)).toList();
-      return elements;
-    } catch (e) {
-      print('Error parsing JSON: $e');
-      return [];
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
+    bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Doodle Dragon'),
@@ -94,7 +70,7 @@ class _SketchScreenState extends State<SketchScreen> {
             icon: Icon(Icons.clear),
             onPressed: () {
               setState(() {
-                points.clear();  // Clear all points
+                points.clear(); // Clear all points
               });
             },
             tooltip: 'Clear Sketch',
@@ -118,79 +94,21 @@ class _SketchScreenState extends State<SketchScreen> {
           ),
         ],
       ),
-      body: buildBody(),
-      bottomNavigationBar: BottomAppBar(
-
-        shape: CircularNotchedRectangle(),
-        color: Theme.of(context).primaryColor,
-
-        child: Row(
-          children: [
-            PopupMenuButton<AiMode>(
-              // Replace with a more visually appealing mode selector for younger kids (e.g., large, tappable icons)
-              icon: Icon(Icons.brush, size: 40), //  Replace with a more appropriate icon (e.g., a palette)
-              iconColor: Colors.white,
-              onSelected: (AiMode newValue) {
-                setState(() => selectedMode = newValue);
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<AiMode>>[
-                const PopupMenuItem<AiMode>(
-                  value: AiMode.Analysis,
-                  child: Row(
-                    children: [
-                      Icon(Icons.analytics, color: Colors.red), // Replace with a custom icon representing 'analysis'
-                      SizedBox(width: 8),
-                      Text('Analyze'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<AiMode>(
-                  value: AiMode.ImageToTrace,
-                  child: Row(
-                    children: [
-                      Icon(Icons.notes, color: Colors.green,), // Replace with a custom icon representing 'tracing'
-                      SizedBox(width: 8),
-                      Text('Easy Trace'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<AiMode>(
-                  value: AiMode.SketchToImage,
-                  child: Row(
-                    children: [
-                      Icon(Icons.image, color:Colors.blue), // Replace with a custom icon representing 'image generation'
-                      SizedBox(width: 8),
-                      Text('Magic Background'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(width: 16), // Space between mode selector and slider
-            Expanded(
-              child: Slider(
-                value: _transparency,
-                min: 0.0,
-                max: 1.0,
-                divisions: 10,
-                activeColor: Colors.white,
-                label: "${(_transparency * 100).toStringAsFixed(0)}%",
-                onChanged: (double value) {
-                  setState(() {
-                    _transparency = value;
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
+      body: Row( // Use Row for main layout
+        children: [
+          Expanded( // Canvas takes the available space
+            child: buildBody(),
+          ),
+          if(isLandscape) controlPanelLandscape(),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => takeSnapshotAndAnalyze(context),
-        tooltip: 'Analyze',
-        child: isLoading ? CircularProgressIndicator(color: Colors.black) : Icon(Icons.engineering),
+      bottomNavigationBar: isLandscape ? null : BottomAppBar(
+        color: Colors.deepPurple,
+        child: controlPanelPortrait(),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: isLandscape
+          ? FloatingActionButtonLocation.endFloat // Position FAB at the bottom right in landscape
+          : FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -223,6 +141,135 @@ class _SketchScreenState extends State<SketchScreen> {
     ],
   );
 
+  Widget modeSelection() {
+    return PopupMenuButton<AiMode>(
+      // Replace with a more visually appealing mode selector for younger kids (e.g., large, tappable icons)
+      icon: Icon(
+        Icons.brush,
+        size: 40,
+      ), //  Replace with a more appropriate icon (e.g., a palette)
+      iconColor: Colors.white,
+      onSelected: (AiMode newValue) {
+        setState(() => selectedMode = newValue);
+      },
+      itemBuilder: (BuildContext context) =>
+      <PopupMenuEntry<AiMode>>[
+        const PopupMenuItem<AiMode>(
+          value: AiMode.Analysis,
+          child: Row(
+            children: [
+              Icon(
+                Icons.analytics,
+                color: Colors.red,
+              ), // Replace with a custom icon representing 'analysis'
+              SizedBox(width: 8),
+              Text('Analyze'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<AiMode>(
+          value: AiMode.ImageToTrace,
+          child: Row(
+            children: [
+              Icon(
+                Icons.notes,
+                color: Colors.green,
+              ), // Replace with a custom icon representing 'tracing'
+              SizedBox(width: 8),
+              Text('Easy Trace'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<AiMode>(
+          value: AiMode.SketchToImage,
+          child: Row(
+            children: [
+              Icon(
+                Icons.image,
+                color: Colors.blue,
+              ), // Replace with a custom icon representing 'image generation'
+              SizedBox(width: 8),
+              Text('Magic Background'),
+            ],
+          ),
+        ),
+      ]
+    );
+  }
+
+  Widget controlPanelLandscape() {
+    return  Container(
+      width: 80, // Adjust width as needed
+      color: Theme.of(context).primaryColor,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          modeSelection(),
+          SizedBox(height: 16),
+          RotatedBox( // Rotate the Slider 90 degrees
+            quarterTurns: 3, // 3 quarter turns for vertical orientation
+            child: Slider(
+              value: _transparency,
+              min: 0.0,
+              max: 1.0,
+              divisions: 10,
+              activeColor: Colors.white,
+              label: "${(_transparency * 100).toStringAsFixed(0)}%",
+              onChanged: (double value) {
+                setState(() {
+                  _transparency = value;
+                });
+              },
+            ),
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: () => takeSnapshotAndAnalyze(context),
+            tooltip: 'Analyze',
+            child: isLoading
+                ? CircularProgressIndicator(
+              color: Colors.black,
+            ) : Icon(Icons.engineering),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget controlPanelPortrait() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        modeSelection(),
+        SizedBox(width: 16),
+        Expanded( // Rotate the Slider 90 degrees
+          child: Slider(
+            value: _transparency,
+            min: 0.0,
+            max: 1.0,
+            divisions: 10,
+            activeColor: Colors.white,
+            label: "${(_transparency * 100).toStringAsFixed(0)}%",
+            onChanged: (double value) {
+              setState(() {
+                _transparency = value;
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 16),
+        FloatingActionButton(
+          onPressed: () => takeSnapshotAndAnalyze(context),
+          tooltip: 'Analyze',
+          child: isLoading
+              ? CircularProgressIndicator(
+            color: Colors.black,
+          ) : Icon(Icons.engineering),
+        ),
+      ],
+    );
+  }
+
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
     return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
@@ -237,11 +284,13 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   void takeSnapshotAndAnalyze(BuildContext context) async {
-    setState(() => isLoading = true);  // Set loading to true when starting the analysis
+    setState(() => isLoading = true); // Set loading to true when starting the analysis
     try {
-      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+          .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+      await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       // String base64String = await capturePng();
@@ -252,21 +301,27 @@ class _SketchScreenState extends State<SketchScreen> {
 
       String base64String = base64Encode(pngBytes);
 
-      String promptText = getPrompt(selectedMode, width, height); //prompts[selectedMode]!;
+      String promptText = getPrompt(selectedMode, width,
+          height); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
         "contents": [
-          { "parts": [
-            {"text": promptText},
-            { "inlineData": {
-              "mimeType": "image/png",
-              "data": base64String
-            }}
-          ]}
+          {
+            "parts": [
+              {"text": promptText},
+              {
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": base64String
+                }
+              }
+            ]
+          }
         ]
       });
 
       var response = await http.post(
-        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+        Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -279,7 +334,7 @@ class _SketchScreenState extends State<SketchScreen> {
           print("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
             _speak(responseText);
-          } else if (selectedMode == AiMode.SketchToImage){
+          } else if (selectedMode == AiMode.SketchToImage) {
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -291,7 +346,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  Uint8List bytesImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  Uint8List bytesImage = base64Decode(
+                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
                 });
               } else {
@@ -300,7 +356,7 @@ class _SketchScreenState extends State<SketchScreen> {
             } catch (e) {
               print('Error calling OpenAI image generation API: $e');
             }
-          } else if (selectedMode == AiMode.ImageToTrace){
+          } else if (selectedMode == AiMode.ImageToTrace) {
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -312,7 +368,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  Uint8List bytesImage = base64Decode(imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  Uint8List bytesImage = base64Decode(
+                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
                 });
               } else {
@@ -331,7 +388,8 @@ class _SketchScreenState extends State<SketchScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false);  // Reset loading state after operation completes
+      setState(() =>
+      isLoading = false); // Reset loading state after operation completes
     }
   }
 
@@ -349,12 +407,14 @@ class SketchPainter extends CustomPainter {
   final BoxFit boxFit;
   final double transparency;
 
-  SketchPainter(this.points, this.showSketch, this.image, this.boxFit, this.transparency);
+  SketchPainter(this.points, this.showSketch, this.image, this.boxFit,
+      this.transparency);
 
   @override
   void paint(Canvas canvas, Size size) {
     // Draw the white background
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
 
     // Draw hints or the image overlay
     if (image != null) {
@@ -364,7 +424,8 @@ class SketchPainter extends CustomPainter {
         rect: Rect.fromLTWH(0, 0, size.width, size.height),
         image: image!,
         fit: boxFit,
-        colorFilter: ColorFilter.mode(Colors.white.withOpacity(transparency), BlendMode.dstIn),
+        colorFilter: ColorFilter.mode(
+            Colors.white.withOpacity(transparency), BlendMode.dstIn),
       );
     }
 
@@ -384,26 +445,4 @@ class SketchPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SketchPainter oldDelegate) => true;
-}
-
-class DrawingElement {
-  String element;
-  List<double> topLeftPoint;
-  List<double> bottomRightPoint;
-
-  DrawingElement({
-    required this.element,
-    required this.topLeftPoint,
-    required this.bottomRightPoint,
-  });
-
-  // Factory constructor to create a DrawingElement from a JSON map
-  factory DrawingElement.fromJson(Map<String, dynamic> json) {
-    return DrawingElement(
-      element: json['element'],
-      // Access the correct keys from the JSON
-      topLeftPoint: List<double>.from(json['bounds'][0]),
-      bottomRightPoint: List<double>.from(json['bounds'][1]),
-    );
-  }
 }
