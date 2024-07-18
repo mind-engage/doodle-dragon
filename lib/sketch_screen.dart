@@ -9,6 +9,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum AiMode { Analysis, ImageToTrace, SketchToImage }
 
@@ -95,11 +97,7 @@ class _SketchScreenState extends State<SketchScreen> {
           ),
           IconButton(
             icon: Icon(Icons.share, size: 50),
-            onPressed: () {
-              setState(() {
-                showSketch = !showSketch;
-              });
-            },
+            onPressed: shareCanvas,
           ),
         ],
       ),
@@ -319,6 +317,23 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
+  void shareCanvas() async {
+    try {
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final directory = (await getApplicationDocumentsDirectory()).path;
+      File imgFile = File('$directory/sketch.png');
+      await imgFile.writeAsBytes(pngBytes);
+
+      // Using Share.shareXFiles from share_plus
+      await Share.shareXFiles([XFile(imgFile.path)], text: 'Check out my sketch!');
+    } catch (e) {
+      print('Error sharing canvas: $e');
+    }
+  }
   void takeSnapshotAndAnalyze(BuildContext context) async {
     setState(() => isLoading = true); // Set loading to true when starting the analysis
     try {
