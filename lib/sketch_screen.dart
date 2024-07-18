@@ -24,6 +24,7 @@ class SketchScreen extends StatefulWidget {
 class _SketchScreenState extends State<SketchScreen> {
   List<Offset?> points = [];
   bool showSketch = true;
+  bool isErasing = false; // Add this line
 
   GlobalKey repaintBoundaryKey = GlobalKey();
   AiMode selectedMode = AiMode.Analysis;
@@ -84,12 +85,13 @@ class _SketchScreenState extends State<SketchScreen> {
             },
           ),
           IconButton(
-            icon: Icon(Icons.remove, size: 50),
+            icon: Icon(isErasing ? Icons.create : Icons.remove_circle_outline, size: 50),
             onPressed: () {
               setState(() {
-                showSketch = !showSketch;
+                isErasing = !isErasing;
               });
             },
+            tooltip: 'Toggle Erase',
           ),
           IconButton(
             icon: Icon(Icons.share, size: 50),
@@ -132,7 +134,11 @@ class _SketchScreenState extends State<SketchScreen> {
               Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
               Offset localPosition = renderBox.globalToLocal(adjustedPosition);
 
-              points.add(localPosition);
+              if (!isErasing) {
+                points.add(localPosition);
+              } else {
+                points = points.where((p) => p == null || (p - localPosition).distance > 20).toList();
+              }
             });
           },
           onPanEnd: (details) => setState(() => points.add(null)),
