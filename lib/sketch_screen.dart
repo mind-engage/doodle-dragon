@@ -67,7 +67,7 @@ class _SketchScreenState extends State<SketchScreen> {
         foregroundColor: Colors.white,
         actions: <Widget>[
           IconButton(
-            icon: Icon(Icons.clear),
+            icon: Icon(Icons.clear, size: 50),
             onPressed: () {
               setState(() {
                 points.clear(); // Clear all points
@@ -76,16 +76,23 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Clear Sketch',
           ),
           IconButton(
-            icon: Icon(Icons.aspect_ratio),
+            icon: Icon(Icons.visibility, size: 50),
             onPressed: () {
               setState(() {
-                boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
+                showSketch = !showSketch;
               });
             },
-            tooltip: 'Toggle BoxFit',
           ),
           IconButton(
-            icon: Icon(Icons.visibility),
+            icon: Icon(Icons.remove, size: 50),
+            onPressed: () {
+              setState(() {
+                showSketch = !showSketch;
+              });
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.share, size: 50),
             onPressed: () {
               setState(() {
                 showSketch = !showSketch;
@@ -145,10 +152,11 @@ class _SketchScreenState extends State<SketchScreen> {
     return PopupMenuButton<AiMode>(
       // Replace with a more visually appealing mode selector for younger kids (e.g., large, tappable icons)
       icon: Icon(
-        Icons.brush,
-        size: 40,
+        Icons.image,
+        size: 50,
       ), //  Replace with a more appropriate icon (e.g., a palette)
       iconColor: Colors.white,
+
       onSelected: (AiMode newValue) {
         setState(() => selectedMode = newValue);
       },
@@ -204,24 +212,36 @@ class _SketchScreenState extends State<SketchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          modeSelection(),
           SizedBox(height: 16),
-          RotatedBox( // Rotate the Slider 90 degrees
-            quarterTurns: 3, // 3 quarter turns for vertical orientation
-            child: Slider(
-              value: _transparency,
-              min: 0.0,
-              max: 1.0,
-              divisions: 10,
-              activeColor: Colors.white,
-              label: "${(_transparency * 100).toStringAsFixed(0)}%",
-              onChanged: (double value) {
-                setState(() {
-                  _transparency = value;
-                });
-              },
+          Expanded(
+            child: RotatedBox( // Rotate the Slider 90 degrees
+              quarterTurns: 3, // 3 quarter turns for vertical orientation
+              child: Slider(
+                value: _transparency,
+                min: 0.0,
+                max: 1.0,
+                divisions: 10,
+                activeColor: Colors.white,
+                label: "${(_transparency * 100).toStringAsFixed(0)}%",
+                onChanged: (double value) {
+                  setState(() {
+                    _transparency = value;
+                  });
+                },
+              ),
             ),
           ),
+          IconButton(
+            icon: Icon(Icons.aspect_ratio, size: 50),
+            color: Colors.white,
+            onPressed: () {
+              setState(() {
+                boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
+              });
+            },
+            tooltip: 'Toggle BoxFit',
+          ),
+          modeSelection(),
           SizedBox(height: 16),
           FloatingActionButton(
             onPressed: () => takeSnapshotAndAnalyze(context),
@@ -240,7 +260,6 @@ class _SketchScreenState extends State<SketchScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        modeSelection(),
         SizedBox(width: 16),
         Expanded( // Rotate the Slider 90 degrees
           child: Slider(
@@ -257,6 +276,17 @@ class _SketchScreenState extends State<SketchScreen> {
             },
           ),
         ),
+        IconButton(
+          icon: Icon(Icons.aspect_ratio, size: 50),
+          color: Colors.white,
+          onPressed: () {
+            setState(() {
+              boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
+            });
+          },
+          tooltip: 'Toggle BoxFit',
+        ),
+        modeSelection(),
         SizedBox(width: 16),
         FloatingActionButton(
           onPressed: () => takeSnapshotAndAnalyze(context),
