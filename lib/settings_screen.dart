@@ -137,8 +137,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ListTile(
-            title: Text('Cognitive and Learning Skills for Age $learnerAge'),
-            titleTextStyle: ,
+            title: Text('Cognitive and Learning Skills for Age $learnerAge',
+              style: TextStyle(
+                fontSize: 20,  // Increased font size
+                fontWeight: FontWeight.bold,  // Bold text for emphasis
+                color: Colors.deepPurple,  // Color that stands out, match this with your app's theme if necessary
+              ),
+            ),
             subtitle: MarkdownBody(
               data: skillsText,
             ),
