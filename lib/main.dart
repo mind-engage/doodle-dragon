@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sketch_screen.dart';
+import 'settings_screen.dart'; // Import the settings screen
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future main() async {
@@ -52,6 +53,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Doodle Dragon Home'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
