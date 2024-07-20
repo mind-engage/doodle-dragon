@@ -68,6 +68,16 @@ flutter:
   assets:
     - dotenv
     - assets/doodle_dragon_logo.png
+    - assets/analysis.png
+    - assets/image_to_trace.png
+    - assets/sketch_to_image.png
+    - assets/brush.png
+    - assets/eraser.png
+    - assets/delete.png
+    - assets/visibility_on.png
+    - assets/visibility_off.png
+    - assets/share.png
+    - assets/transparency.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

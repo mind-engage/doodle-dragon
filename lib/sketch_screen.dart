@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
@@ -29,23 +30,38 @@ class _SketchScreenState extends State<SketchScreen> {
   bool isErasing = false; // Add this line
 
   GlobalKey repaintBoundaryKey = GlobalKey();
-  AiMode selectedMode = AiMode.Analysis;
   FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  BoxFit boxFit = BoxFit.cover; // Default value
-  double _transparency = 1.0; // Default transparency
+  List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
+  int _currentTransparencyLevel = 0;
+
+  double iconWidth = 80;
+  double iconHeight = 80;
 
   String getPrompt(AiMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
       case AiMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
       case AiMode.SketchToImage:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation.";
+        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image should closely resemble the drawing, but colorful";
       case AiMode.ImageToTrace:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generate image will be used to learn drawing by tracing over. Generate a suitable prompt with length below 1000 characters";
+        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image will be used to learn drawing by tracing over. Instruct the model to generate black and traceable line drawing. Generate a suitable prompt with length below 1000 characters";
+      default:
+        return ""; // Handle any other cases or throw an error if needed
+    }
+  }
+
+  String getMessageToUser(AiMode mode) {
+    switch (mode) {
+      case AiMode.Analysis:
+        return "I will be analyzing your drawing. Please wait";
+      case AiMode.SketchToImage:
+        return "I will convert your sketch to an image. Please wait";
+      case AiMode.ImageToTrace:
+        return "I will convert the image to traceable sketch. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -65,12 +81,22 @@ class _SketchScreenState extends State<SketchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          // Status bar color
+          statusBarColor: Colors.deepPurple,
+
+          // Status bar brightness (optional)
+          statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
+          statusBarBrightness: Brightness.light, // For iOS (dark icons)
+        ),
         title: Text('Doodle Dragon'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.lightBlue,
+        foregroundColor: Colors.red,
+        toolbarHeight: isLandscape ? 0 : 150,
+
         actions: <Widget>[
           IconButton(
-            icon: Icon(Icons.clear, size: 50),
+            icon: Image.asset("assets/delete.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
               setState(() {
                 points.clear(); // Clear all points
@@ -79,7 +105,8 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Clear Sketch',
           ),
           IconButton(
-            icon: Icon(Icons.visibility, size: 50),
+            icon: showSketch ? Image.asset("assets/visibility_on.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
+              Image.asset("assets/visibility_off.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
               setState(() {
                 showSketch = !showSketch;
@@ -87,7 +114,8 @@ class _SketchScreenState extends State<SketchScreen> {
             },
           ),
           IconButton(
-            icon: Icon(isErasing ? Icons.create : Icons.remove_circle_outline, size: 50),
+            icon: isErasing ? Image.asset("assets/brush.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
+              Image.asset("assets/eraser.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
               setState(() {
                 isErasing = !isErasing;
@@ -96,7 +124,7 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Toggle Erase',
           ),
           IconButton(
-            icon: Icon(Icons.share, size: 50),
+            icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: shareCanvas,
           ),
         ],
@@ -110,12 +138,10 @@ class _SketchScreenState extends State<SketchScreen> {
         ],
       ),
       bottomNavigationBar: isLandscape ? null : BottomAppBar(
-        color: Colors.deepPurple,
+        color: Colors.lightBlue,
         child: controlPanelPortrait(),
+        height: 180,
       ),
-      floatingActionButtonLocation: isLandscape
-          ? FloatingActionButtonLocation.endFloat // Position FAB at the bottom right in landscape
-          : FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -126,7 +152,7 @@ class _SketchScreenState extends State<SketchScreen> {
           onPanUpdate: (details) {
             setState(() {
               RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight = AppBar().preferredSize.height;
+              double appBarHeight = 150;//AppBar().toolbarHeight!;
               double topPadding = MediaQuery.of(context).padding.top;
 
               Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
@@ -143,7 +169,7 @@ class _SketchScreenState extends State<SketchScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage, boxFit, _transparency),
+              painter: SketchPainter(points, showSketch, generatedImage, _transparencyLevels[_currentTransparencyLevel]),
               child: Container(),
             ),
           ),
@@ -152,62 +178,6 @@ class _SketchScreenState extends State<SketchScreen> {
     ],
   );
 
-  Widget modeSelection() {
-    return PopupMenuButton<AiMode>(
-      // Replace with a more visually appealing mode selector for younger kids (e.g., large, tappable icons)
-      icon: Icon(
-        Icons.image,
-        size: 50,
-      ), //  Replace with a more appropriate icon (e.g., a palette)
-      iconColor: Colors.white,
-
-      onSelected: (AiMode newValue) {
-        setState(() => selectedMode = newValue);
-      },
-      itemBuilder: (BuildContext context) =>
-      <PopupMenuEntry<AiMode>>[
-        const PopupMenuItem<AiMode>(
-          value: AiMode.Analysis,
-          child: Row(
-            children: [
-              Icon(
-                Icons.analytics,
-                color: Colors.red,
-              ), // Replace with a custom icon representing 'analysis'
-              SizedBox(width: 8),
-              Text('Analyze'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<AiMode>(
-          value: AiMode.ImageToTrace,
-          child: Row(
-            children: [
-              Icon(
-                Icons.notes,
-                color: Colors.green,
-              ), // Replace with a custom icon representing 'tracing'
-              SizedBox(width: 8),
-              Text('Easy Trace'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<AiMode>(
-          value: AiMode.SketchToImage,
-          child: Row(
-            children: [
-              Icon(
-                Icons.image,
-                color: Colors.blue,
-              ), // Replace with a custom icon representing 'image generation'
-              SizedBox(width: 8),
-              Text('Magic Background'),
-            ],
-          ),
-        ),
-      ]
-    );
-  }
 
   Widget controlPanelLandscape() {
     return  Container(
@@ -217,44 +187,6 @@ class _SketchScreenState extends State<SketchScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(height: 16),
-          Expanded(
-            child: RotatedBox( // Rotate the Slider 90 degrees
-              quarterTurns: 3, // 3 quarter turns for vertical orientation
-              child: Slider(
-                value: _transparency,
-                min: 0.0,
-                max: 1.0,
-                divisions: 10,
-                activeColor: Colors.white,
-                label: "${(_transparency * 100).toStringAsFixed(0)}%",
-                onChanged: (double value) {
-                  setState(() {
-                    _transparency = value;
-                  });
-                },
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.aspect_ratio, size: 50),
-            color: Colors.white,
-            onPressed: () {
-              setState(() {
-                boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
-              });
-            },
-            tooltip: 'Toggle BoxFit',
-          ),
-          modeSelection(),
-          SizedBox(height: 16),
-          FloatingActionButton(
-            onPressed: () => takeSnapshotAndAnalyze(context),
-            tooltip: 'Analyze',
-            child: isLoading
-                ? CircularProgressIndicator(
-              color: Colors.black,
-            ) : Icon(Icons.engineering),
-          ),
         ],
       ),
     );
@@ -265,40 +197,36 @@ class _SketchScreenState extends State<SketchScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(width: 16),
-        Expanded( // Rotate the Slider 90 degrees
-          child: Slider(
-            value: _transparency,
-            min: 0.0,
-            max: 1.0,
-            divisions: 10,
-            activeColor: Colors.white,
-            label: "${(_transparency * 100).toStringAsFixed(0)}%",
-            onChanged: (double value) {
-              setState(() {
-                _transparency = value;
-              });
-            },
-          ),
-        ),
+
         IconButton(
-          icon: Icon(Icons.aspect_ratio, size: 50),
+          icon: Image.asset("assets/analysis.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
+            takeSnapshotAndAnalyze(context,  AiMode.Analysis);
+          },
+        ),
+        IconButton(
+          icon: Image.asset("assets/sketch_to_image.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          color: Colors.white,
+          onPressed: () {
+            takeSnapshotAndAnalyze(context,  AiMode.SketchToImage);
+          },
+        ),
+        IconButton(
+          icon: Image.asset("assets/image_to_trace.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          color: Colors.white,
+          onPressed: () {
+            takeSnapshotAndAnalyze(context,  AiMode.ImageToTrace);
+          },
+        ),
+        IconButton(
+          icon: Image.asset("assets/transparency.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
+          color: Colors.deepPurple,
+          onPressed: () {
             setState(() {
-              boxFit = boxFit == BoxFit.cover ? BoxFit.contain : BoxFit.cover;
+              _currentTransparencyLevel = (_currentTransparencyLevel + 1) % _transparencyLevels.length;
             });
           },
-          tooltip: 'Toggle BoxFit',
-        ),
-        modeSelection(),
-        SizedBox(width: 16),
-        FloatingActionButton(
-          onPressed: () => takeSnapshotAndAnalyze(context),
-          tooltip: 'Analyze',
-          child: isLoading
-              ? CircularProgressIndicator(
-            color: Colors.black,
-          ) : Icon(Icons.engineering),
         ),
       ],
     );
@@ -334,8 +262,16 @@ class _SketchScreenState extends State<SketchScreen> {
       print('Error sharing canvas: $e');
     }
   }
-  void takeSnapshotAndAnalyze(BuildContext context) async {
+  void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
     setState(() => isLoading = true); // Set loading to true when starting the analysis
+
+    _speak(getMessageToUser(selectedMode));
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+    );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
@@ -392,6 +328,7 @@ class _SketchScreenState extends State<SketchScreen> {
                 model: 'dall-e-3',
                 prompt: responseText,
                 n: 1,
+                size: OpenAIImageSize.size1024,
                 responseFormat: OpenAIImageResponseFormat.b64Json,
               );
 
@@ -411,9 +348,10 @@ class _SketchScreenState extends State<SketchScreen> {
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-2',
+                model: 'dall-e-3',
                 prompt: responseText,
                 n: 1,
+                size: OpenAIImageSize.size1024,
                 responseFormat: OpenAIImageResponseFormat.b64Json,
               );
 
@@ -439,8 +377,8 @@ class _SketchScreenState extends State<SketchScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() =>
-      isLoading = false); // Reset loading state after operation completes
+      setState(() => isLoading = false); // Reset loading state after operation completes
+      Navigator.of(context).pop();
     }
   }
 
@@ -455,11 +393,9 @@ class SketchPainter extends CustomPainter {
   final List<Offset?> points;
   final bool showSketch;
   final ui.Image? image;
-  final BoxFit boxFit;
   final double transparency;
 
-  SketchPainter(this.points, this.showSketch, this.image, this.boxFit,
-      this.transparency);
+  SketchPainter(this.points, this.showSketch, this.image, this.transparency);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -474,7 +410,7 @@ class SketchPainter extends CustomPainter {
         canvas: canvas,
         rect: Rect.fromLTWH(0, 0, size.width, size.height),
         image: image!,
-        fit: boxFit,
+        fit: BoxFit.contain,
         colorFilter: ColorFilter.mode(
             Colors.white.withOpacity(transparency), BlendMode.dstIn),
       );
