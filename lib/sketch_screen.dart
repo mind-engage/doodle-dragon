@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 enum AiMode { Analysis, ImageToTrace, SketchToImage }
 
@@ -40,6 +41,12 @@ class _SketchScreenState extends State<SketchScreen> {
 
   double iconWidth = 80;
   double iconHeight = 80;
+
+  stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool _isListening = false;
+  bool _speechEnabled = false;
+  String _sttText = "Press the button and start speaking";
+  OverlayEntry? _overlayEntry;
 
   String getPrompt(AiMode mode, double canvasWidth, double canvasHeight) {
     switch (mode) {
@@ -73,6 +80,12 @@ class _SketchScreenState extends State<SketchScreen> {
     flutterTts.setLanguage("en-US");
     flutterTts.setSpeechRate(0.5);
     OpenAI.apiKey = widget.openaiApiKey;
+    _initSpeech();
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
   }
 
   @override
@@ -139,8 +152,12 @@ class _SketchScreenState extends State<SketchScreen> {
       ),
       bottomNavigationBar: isLandscape ? null : BottomAppBar(
         color: Colors.lightBlue,
-        child: controlPanelPortrait(),
         height: 180,
+        child: controlPanelPortrait(),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _listen,
+        child: Icon(_isListening ? Icons.mic : Icons.mic_none),
       ),
     );
   }
@@ -386,6 +403,57 @@ class _SketchScreenState extends State<SketchScreen> {
     if (text.isNotEmpty) {
       await flutterTts.speak(text);
     }
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      _speak("Tell what you want draw");
+      if (_speechEnabled) {
+        setState(() => _isListening = true);
+        _speechToText.listen(
+          onResult: (result) {
+            setState(() {
+              _sttText = result.recognizedWords;
+            });
+            _overlayEntry?.markNeedsBuild();  // Rebuild overlay with new text
+          },
+        );
+        _showOverlay(context);  // Show overlay when starting to listen
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speechToText.stop();
+      _removeOverlay();  // Remove overlay when not listening
+    }
+  }
+
+  void _showOverlay(BuildContext context) {
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 200,
+        right: 80,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _sttText,
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context)?.insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 }
 
