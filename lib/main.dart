@@ -4,9 +4,16 @@ import 'trace_screen.dart';
 import 'imagen_screen.dart';
 import 'settings_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
 
 Future main() async {
   await dotenv.load(fileName: "dotenv");
+  // Lock screen orientation to portrait
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(DoodleDragon());
 }
 
@@ -56,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Doodle Dragon Home'),
+        title: Text('Doodle Dragon'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.settings),
@@ -106,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   );
                 },
               ),
+              SizedBox(height: 40),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green, // Make the button visually appealing
@@ -123,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   );
                 },
               ),
+              SizedBox(height: 40),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green, // Make the button visually appealing
