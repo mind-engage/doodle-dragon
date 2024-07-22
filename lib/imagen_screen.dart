@@ -238,6 +238,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
           color: Colors.deepPurple,
           onPressed: () {
             _stop_speech();
+            _abortListening();
           },
         ),
       ],
@@ -488,6 +489,15 @@ class _ImagenScreenState extends State<ImagenScreen> {
       if(_sttText.isNotEmpty) {
         generatePicture(context, AiMode.PromptToImage);
       }
+    }
+  }
+
+  void _abortListening() {
+    if (_isListening) {
+      setState(() => _isListening = false);
+      _speechToText.stop();
+      _removeOverlay();
+      _sttText = "";
     }
   }
 
