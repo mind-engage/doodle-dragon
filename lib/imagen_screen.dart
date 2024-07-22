@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
+import 'image_picker_screen.dart';
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -141,10 +142,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
           ),
           IconButton(
             icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-
-            },
-            tooltip: 'Toggle Erase',
+            onPressed: _loadImageFromLibrary,
+            tooltip: 'Load Image',
           ),
           IconButton(
             icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -470,6 +469,17 @@ class _ImagenScreenState extends State<ImagenScreen> {
         SnackBar(content: Text('Failed to save image')),
       );
     }
+  }
+
+  Future<void> _loadImageFromLibrary() async {
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => ImagePickerScreen(onSelect: (File file) {
+      _setImage(file);
+    })));
+  }
+
+  void _setImage(File file) async {
+    final Uint8List bytes = await file.readAsBytes();
+    decodeAndSetImage(bytes);
   }
 
   Future<void> _speak(String text) async {
