@@ -137,9 +137,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
           ),
           IconButton(
             icon:  Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-
-            },
+            onPressed: _saveGeneratedImage,
           ),
           IconButton(
             icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -442,6 +440,35 @@ class _ImagenScreenState extends State<ImagenScreen> {
     } finally {
       setState(() => isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
+    }
+  }
+
+  void _saveGeneratedImage() async {
+    if (generatedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No image to save')),
+      );
+      return;
+    }
+
+    try {
+      ByteData? byteData = await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final directory = (await getApplicationDocumentsDirectory()).path;
+      String filename = 'generated_image_${DateTime.now().millisecondsSinceEpoch}.png';
+      File imgFile = File('$directory/$filename');
+      await imgFile.writeAsBytes(pngBytes);
+
+      // Optionally, show a message that the file has been saved.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image saved to $filename')),
+      );
+    } catch (e) {
+      print('Error saving generated image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save image')),
+      );
     }
   }
 
