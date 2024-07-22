@@ -17,16 +17,16 @@ import 'dart:async';
 
 enum AiMode { Analysis, ImageToTrace, SketchToImage, PromptToImage }
 
-class SketchScreen extends StatefulWidget {
+class ImagenScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
-  const SketchScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
+  const ImagenScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
 
   @override
-  _SketchScreenState createState() => _SketchScreenState();
+  _ImagenScreenState createState() => _ImagenScreenState();
 }
 
-class _SketchScreenState extends State<SketchScreen> {
+class _ImagenScreenState extends State<ImagenScreen> {
   List<Offset?> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line

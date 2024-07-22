@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'sketch_screen.dart';
-import 'settings_screen.dart'; // Import the settings screen
+import 'trace_screen.dart';
+import 'imagen_screen.dart';
+import 'settings_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future main() async {
@@ -98,6 +100,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SketchScreen(
+                        geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                        openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
+                    )),
+                  );
+                },
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green, // Make the button visually appealing
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  textStyle: TextStyle(fontSize: 20),
+                ),
+                child: Text('Start Tracing!'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TraceScreen(
+                        geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                        openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
+                    )),
+                  );
+                },
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green, // Make the button visually appealing
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  textStyle: TextStyle(fontSize: 20),
+                ),
+                child: Text('Start Imagen!'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ImagenScreen(
                         geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
                         openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
                     )),
