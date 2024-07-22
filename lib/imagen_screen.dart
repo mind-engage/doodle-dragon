@@ -46,7 +46,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
   String _sttText = "";
   OverlayEntry? _overlayEntry;
   int learnerAge = 3;
-
+  // Default mode for voice listen commands
+  AiMode _aiMode = AiMode.PromptToImage;
+  
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -54,7 +56,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
       case AiMode.Poetry:
         return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a poem.";
       case AiMode.Explore:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image will be used to learn drawing by tracing over. Instruct the model to generate black and traceable line drawing. Generate a suitable prompt with length below 1000 characters";
+        return "The attached image is generate by a $learnerAge year child using text to image."
+            "The child wants to explore more about the drawing. and has an enquiry."
+            "child's enquiry: $_sttText"
+            "Generate a reply to the child in the context of supplied image. The answer should help child's language skills";
       case AiMode.PromptToImage:
         return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
             "Elaborate the child's requirement $_sttText and  generate the prompt to create the image";
@@ -63,7 +68,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
     }
   }
 
-  String getMessageToUser(AiMode mode) {
+  String getWaitMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
         return "I am creating a story for you. Please wait";
@@ -78,6 +83,17 @@ class _ImagenScreenState extends State<ImagenScreen> {
     }
   }
 
+  String getMessageForVoicePrompting(AiMode mode) {
+    switch (mode) {
+      case AiMode.Explore:
+        return "Tell me what to explore";
+      case AiMode.PromptToImage:
+        return "Can you tell me what you'd like to draw?";
+      default:
+        return ""; // Handle any other cases or throw an error if needed
+    }
+  }
+  
   @override
   void initState() {
     super.initState();
@@ -132,7 +148,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
           IconButton(
             icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
-                _listen();
+              setState(() {
+                _aiMode = AiMode.PromptToImage;
+              });
+              _listen();
             },
             tooltip: 'Clear Sketch',
           ),
@@ -164,7 +183,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
         child: controlPanelPortrait(),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _listen,
+        onPressed: () {
+          _listen();
+        },
         child: _isListening ? Image.asset('assets/robot_mic.png') : Image.asset('assets/robot_mic.png'),
       ),
     );
@@ -227,7 +248,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
           icon: Image.asset("assets/explore.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Explore);
+            setState(() {
+              _aiMode = AiMode.Explore;
+            });
+            _listen();
           },
         ),
         IconButton(
@@ -275,7 +299,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
     setState(() => isLoading = true);   // Set loading to true when starting the analysis
 
-    _speak(getMessageToUser(selectedMode));
+    _speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -333,6 +357,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
           } else if (selectedMode == AiMode.Poetry) {
             _speak(responseText);
           } else if (selectedMode == AiMode.Explore) {
+            _speak(responseText);
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -373,7 +398,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   void generatePicture(BuildContext context, AiMode selectedMode) async {
     setState(() => isLoading = true); // Set loading to true when starting the analysis
 
-    _speak(getMessageToUser(selectedMode));
+    _speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -498,7 +523,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   }
   void _listen() async {
     if (!_isListening) {
-      await _speak("Can you tell me what you'd like to draw?");
+      await _speak(getMessageForVoicePrompting(_aiMode)); //"Can you tell me what you'd like to draw?");
       if (_speechEnabled) {
         setState(() => _isListening = true);
         _speechToText.listen(
@@ -524,7 +549,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
       _speechToText.stop();
       _removeOverlay();
       if(_sttText.isNotEmpty) {
-        generatePicture(context, AiMode.PromptToImage);
+        if(_aiMode == AiMode.PromptToImage) {
+          generatePicture(context, AiMode.PromptToImage);
+        } else if(_aiMode == AiMode.Explore) {
+          takeSnapshotAndAnalyze(context, _aiMode);
+        }
       }
     }
   }
