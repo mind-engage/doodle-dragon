@@ -80,6 +80,17 @@ flutter:
     - assets/visibility_off.png
     - assets/share.png
     - assets/transparency.png
+    - assets/pencil_icon.png
+    - assets/trace_icon.png
+    - assets/imagen_icon.png
+    - assets/story.png
+    - assets/poem.png
+    - assets/explore.png
+    - assets/stop_voice.png
+    - assets/robot_mic.png
+    - assets/imagen_square.png
+    - assets/save.png
+    - assets/library.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -15,7 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 
-enum AiMode { Analysis, ImageToTrace, SketchToImage, PromptToImage }
+enum AiMode { Story, Explore, Poetry, PromptToImage }
 
 class ImagenScreen extends StatefulWidget {
   final String geminiApiKey;
@@ -34,11 +34,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   GlobalKey repaintBoundaryKey = GlobalKey();
   FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;
-  final double canvasWidth = 1024;
-  final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
-  int _currentTransparencyLevel = 3;
 
   double iconWidth = 80;
   double iconHeight = 80;
@@ -48,14 +44,15 @@ class _ImagenScreenState extends State<ImagenScreen> {
   bool _speechEnabled = false;
   String _sttText = "";
   OverlayEntry? _overlayEntry;
+  int learnerAge = 3;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
-      case AiMode.Analysis:
-        return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
-      case AiMode.SketchToImage:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image should closely resemble the drawing, but colorful";
-      case AiMode.ImageToTrace:
+      case AiMode.Story:
+        return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a story. Your output is used by the application to play to child using text to speech";
+      case AiMode.Poetry:
+        return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a poem.";
+      case AiMode.Explore:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image will be used to learn drawing by tracing over. Instruct the model to generate black and traceable line drawing. Generate a suitable prompt with length below 1000 characters";
       case AiMode.PromptToImage:
         return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
@@ -67,12 +64,12 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
   String getMessageToUser(AiMode mode) {
     switch (mode) {
-      case AiMode.Analysis:
-        return "I will be analyzing your drawing. Please wait";
-      case AiMode.SketchToImage:
-        return "I will convert your sketch to an image. Please wait";
-      case AiMode.ImageToTrace:
-        return "I will convert the image to traceable sketch. Please wait";
+      case AiMode.Story:
+        return "I am creating a story for you. Please wait";
+      case AiMode.Poetry:
+        return "I am making a poem for you. Please wait";
+      case AiMode.Explore:
+        return "I am finding answer";
       case AiMode.PromptToImage:
         return "Generating the picture. Please wait";
       default:
@@ -132,30 +129,22 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
         actions: <Widget>[
           IconButton(
-            icon: Image.asset("assets/delete.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
-              setState(() {
-                points.clear(); // Clear all points
-              });
+                _listen();
             },
             tooltip: 'Clear Sketch',
           ),
           IconButton(
-            icon: showSketch ? Image.asset("assets/visibility_on.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/visibility_off.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            icon:  Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
-              setState(() {
-                showSketch = !showSketch;
-              });
+
             },
           ),
           IconButton(
-            icon: isErasing ? Image.asset("assets/brush.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/eraser.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
-              setState(() {
-                isErasing = !isErasing;
-              });
+
             },
             tooltip: 'Toggle Erase',
           ),
@@ -170,7 +159,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
           Expanded( // Canvas takes the available space
             child: buildBody(),
           ),
-          if(isLandscape) controlPanelLandscape(),
         ],
       ),
       bottomNavigationBar: isLandscape ? null : BottomAppBar(
@@ -180,7 +168,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _listen,
-        child: Icon(_isListening ? Icons.mic : Icons.mic_none),
+        child: _isListening ? Image.asset('assets/robot_mic.png') : Image.asset('assets/robot_mic.png'),
       ),
     );
   }
@@ -209,7 +197,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
           child: RepaintBoundary(
             key: repaintBoundaryKey,
             child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage, _transparencyLevels[_currentTransparencyLevel]),
+              painter: SketchPainter(points, showSketch, generatedImage),
               child: Container(),
             ),
           ),
@@ -218,20 +206,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
     ],
   );
 
-
-  Widget controlPanelLandscape() {
-    return  Container(
-      width: 80, // Adjust width as needed
-      color: Theme.of(context).primaryColor,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
   Widget controlPanelPortrait() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -239,33 +213,31 @@ class _ImagenScreenState extends State<ImagenScreen> {
         SizedBox(width: 16),
 
         IconButton(
-          icon: Image.asset("assets/analysis.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/story.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Analysis);
+            takeSnapshotAndAnalyze(context,  AiMode.Story);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/sketch_to_image.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/poem.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.SketchToImage);
+            takeSnapshotAndAnalyze(context,  AiMode.Poetry);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/image_to_trace.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/explore.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.ImageToTrace);
+            takeSnapshotAndAnalyze(context,  AiMode.Explore);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/transparency.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
+          icon: Image.asset("assets/stop_voice.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
           color: Colors.deepPurple,
           onPressed: () {
-            setState(() {
-              _currentTransparencyLevel = (_currentTransparencyLevel + 1) % _transparencyLevels.length;
-            });
+            _stop_speech();
           },
         ),
       ],
@@ -358,32 +330,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
-          if (selectedMode == AiMode.Analysis) {
+          if (selectedMode == AiMode.Story) {
             _speak(responseText);
-          } else if (selectedMode == AiMode.SketchToImage) {
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
-
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
-            }
-          } else if (selectedMode == AiMode.ImageToTrace) {
+          } else if (selectedMode == AiMode.Poetry) {
+            _speak(responseText);
+          } else if (selectedMode == AiMode.Explore) {
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -504,6 +455,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
     }
   }
 
+  void _stop_speech() async {
+      await flutterTts.stop();
+  }
   void _listen() async {
     if (!_isListening) {
       await _speak("Can you tell me what you'd like to draw?");
@@ -536,8 +490,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
       }
     }
   }
-
-
 
   void _showOverlay(BuildContext context) {
     _overlayEntry = OverlayEntry(
@@ -573,9 +525,8 @@ class SketchPainter extends CustomPainter {
   final List<Offset?> points;
   final bool showSketch;
   final ui.Image? image;
-  final double transparency;
 
-  SketchPainter(this.points, this.showSketch, this.image, this.transparency);
+  SketchPainter(this.points, this.showSketch, this.image);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -591,8 +542,6 @@ class SketchPainter extends CustomPainter {
         rect: Rect.fromLTWH(0, 0, size.width, size.height),
         image: image!,
         fit: BoxFit.contain,
-        colorFilter: ColorFilter.mode(
-            Colors.white.withOpacity(transparency), BlendMode.dstIn),
       );
     }
 

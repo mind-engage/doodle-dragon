@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.pink, Colors.yellow, Colors.lightBlueAccent], // Use a playful gradient
+            colors: [Colors.pink, Colors.yellow, Colors.lightBlueAccent],
           ),
         ),
         child: Center(
@@ -92,17 +92,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 turns: _animation,
                 child: Image.asset(
                   'assets/doodle_dragon_logo.png',
-                  height: 200, // Adjust size as needed
+                  height: 200,
                 ),
               ),
               SizedBox(height: 40),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // Make the button visually appealing
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  textStyle: TextStyle(fontSize: 20),
+                  backgroundColor: Colors.green,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                child: Text('Start Drawing!'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -112,15 +110,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     )),
                   );
                 },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min, // Aligns children closely together
+                  children: <Widget>[
+                    Image.asset('assets/pencil_icon.png', height: 60),
+                    SizedBox(width: 10), // Spacing between the image and the text
+                    Text('Start Drawing!'),
+                  ],
+                ),
               ),
-              SizedBox(height: 40),
+              SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // Make the button visually appealing
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  textStyle: TextStyle(fontSize: 20),
+                  backgroundColor: Colors.green,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                child: Text('Start Tracing!'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -130,15 +134,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     )),
                   );
                 },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Image.asset('assets/trace_icon.png', height: 60),
+                    SizedBox(width: 10),
+                    Text('Start Tracing!'),
+                  ],
+                ),
               ),
-              SizedBox(height: 40),
+              SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green, // Make the button visually appealing
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  textStyle: TextStyle(fontSize: 20),
+                  backgroundColor: Colors.green,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                child: Text('Start Imagen!'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -148,6 +158,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     )),
                   );
                 },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Image.asset('assets/imagen_icon.png', height: 60),
+                    SizedBox(width: 10),
+                    Text('Start Imagen!'),
+                  ],
+                ),
               ),
             ],
           ),
