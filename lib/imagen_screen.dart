@@ -21,7 +21,8 @@ enum AiMode { Story, Explore, Poetry, PromptToImage }
 class ImagenScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
-  const ImagenScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
+  const ImagenScreen(
+      {super.key, required this.geminiApiKey, required this.openaiApiKey});
 
   @override
   _ImagenScreenState createState() => _ImagenScreenState();
@@ -48,7 +49,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   int learnerAge = 3;
   // Default mode for voice listen commands
   AiMode _aiMode = AiMode.PromptToImage;
-  
+
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -93,7 +94,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
         return ""; // Handle any other cases or throw an error if needed
     }
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -120,132 +121,161 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
   void _initTts() {
     flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(1.0); // Higher pitch often perceived as friendlier by children
-    flutterTts.setSpeechRate(0.4); // Slower rate for better comprehension by young children
-    flutterTts.awaitSpeakCompletion(true); // Wait for spoken feedback to complete
+    flutterTts.setPitch(
+        1.0); // Higher pitch often perceived as friendlier by children
+    flutterTts.setSpeechRate(
+        0.4); // Slower rate for better comprehension by young children
+    flutterTts
+        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle(
-          // Status bar color
           statusBarColor: Colors.deepPurple,
-
-          // Status bar brightness (optional)
           statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
           statusBarBrightness: Brightness.light, // For iOS (dark icons)
         ),
-        title: Text('Doodle Dragon'),
         backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.red,
-        toolbarHeight: isLandscape ? 0 : 150,
-
-        actions: <Widget>[
-          IconButton(
-            icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                _aiMode = AiMode.PromptToImage;
-              });
-              _listen();
-            },
-            tooltip: 'Clear Sketch',
-          ),
-          IconButton(
-            icon:  Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: _saveGeneratedImage,
-          ),
-          IconButton(
-            icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: _loadImageFromLibrary,
-            tooltip: 'Load Image',
-          ),
-          IconButton(
-            icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: shareCanvas,
-          ),
-        ],
+        titleSpacing: 0,
+        toolbarHeight: 150,
+        title: Column(
+          children: <Widget>[
+            Text('Imagening', style: TextStyle(color: Colors.white)), // Adjust text style as needed
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: () {
+                      setState(() {
+                        _aiMode = AiMode.PromptToImage;
+                      });
+                      _listen();
+                    },
+                    tooltip: 'Clear Sketch',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: _saveGeneratedImage,
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: _loadImageFromLibrary,
+                    tooltip: 'Load Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: shareCanvas,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      body: Row( // Use Row for main layout
+      body: Row(
+        // Use Row for main layout
         children: [
-          Expanded( // Canvas takes the available space
+          Expanded(
+            // Canvas takes the available space
             child: buildBody(),
           ),
         ],
       ),
-      bottomNavigationBar: isLandscape ? null : BottomAppBar(
-        color: Colors.lightBlue,
-        height: 180,
-        child: controlPanelPortrait(),
-      ),
+      bottomNavigationBar: isLandscape
+          ? null
+          : BottomAppBar(
+              color: Colors.lightBlue,
+              height: 180,
+              child: controlPanelPortrait(),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _listen();
         },
-        child: _isListening ? Image.asset('assets/robot_mic.png') : Image.asset('assets/robot_mic.png'),
+        child: _isListening
+            ? Image.asset('assets/robot_mic.png')
+            : Image.asset('assets/robot_mic.png'),
       ),
     );
   }
 
   Widget buildBody() => Column(
-    children: [
-      Expanded(
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            setState(() {
-              RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight = 150;//AppBar().toolbarHeight!;
-              double topPadding = MediaQuery.of(context).padding.top;
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  double appBarHeight = 150; //AppBar().toolbarHeight!;
+                  double topPadding = MediaQuery.of(context).padding.top;
 
-              Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
-              Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                  Offset adjustedPosition = details.globalPosition -
+                      Offset(0, appBarHeight + topPadding);
+                  Offset localPosition =
+                      renderBox.globalToLocal(adjustedPosition);
 
-              if (!isErasing) {
-                points.add(localPosition);
-              } else {
-                points = points.where((p) => p == null || (p - localPosition).distance > 20).toList();
-              }
-            });
-          },
-          onPanEnd: (details) => setState(() => points.add(null)),
-          child: RepaintBoundary(
-            key: repaintBoundaryKey,
-            child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage),
-              child: Container(),
+                  if (!isErasing) {
+                    points.add(localPosition);
+                  } else {
+                    points = points
+                        .where((p) =>
+                            p == null || (p - localPosition).distance > 20)
+                        .toList();
+                  }
+                });
+              },
+              onPanEnd: (details) => setState(() => points.add(null)),
+              child: RepaintBoundary(
+                key: repaintBoundaryKey,
+                child: CustomPaint(
+                  painter: SketchPainter(points, showSketch, generatedImage),
+                  child: Container(),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 
   Widget controlPanelPortrait() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(width: 16),
-
         IconButton(
-          icon: Image.asset("assets/story.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/story.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Story);
+            takeSnapshotAndAnalyze(context, AiMode.Story);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/poem.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/poem.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Poetry);
+            takeSnapshotAndAnalyze(context, AiMode.Poetry);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/explore.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/explore.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
             setState(() {
@@ -255,7 +285,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
           },
         ),
         IconButton(
-          icon: Image.asset("assets/stop_voice.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
+          icon: Image.asset("assets/stop_voice.png",
+              width: iconWidth,
+              height: iconHeight,
+              fit: BoxFit.fill), // Example icon - you can customize
           color: Colors.deepPurple,
           onPressed: () {
             _stop_speech();
@@ -268,7 +301,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
-    return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
+    return safetyRatings
+        .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
   void decodeAndSetImage(Uint8List imageData) async {
@@ -281,9 +315,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
   void shareCanvas() async {
     try {
-      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
@@ -291,27 +327,31 @@ class _ImagenScreenState extends State<ImagenScreen> {
       await imgFile.writeAsBytes(pngBytes);
 
       // Using Share.shareXFiles from share_plus
-      await Share.shareXFiles([XFile(imgFile.path)], text: 'Check out my sketch!');
+      await Share.shareXFiles([XFile(imgFile.path)],
+          text: 'Check out my sketch!');
     } catch (e) {
       print('Error sharing canvas: $e');
     }
   }
+
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true);   // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       // String base64String = await capturePng();
@@ -329,10 +369,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
             "parts": [
               {"text": promptText},
               {
-                "inlineData": {
-                  "mimeType": "image/png",
-                  "data": base64String
-                }
+                "inlineData": {"mimeType": "image/png", "data": base64String}
               }
             ]
           }
@@ -370,8 +407,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  Uint8List bytesImage = base64Decode(imageResponse.data.first
+                      .b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
                 });
               } else {
@@ -390,23 +427,25 @@ class _ImagenScreenState extends State<ImagenScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
 
   void generatePicture(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true); // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-
       String promptText = getPrompt(selectedMode);
       String jsonBody = jsonEncode({
         "contents": [
@@ -431,28 +470,28 @@ class _ImagenScreenState extends State<ImagenScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
+          // Generate an image from a text prompt
+          try {
+            final imageResponse = await OpenAI.instance.image.create(
+              model: 'dall-e-3',
+              prompt: responseText,
+              n: 1,
+              size: OpenAIImageSize.size1024,
+              responseFormat: OpenAIImageResponseFormat.b64Json,
+            );
 
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
+            if (imageResponse.data.isNotEmpty) {
+              setState(() {
+                Uint8List bytesImage = base64Decode(imageResponse.data.first
+                    .b64Json!); // Assuming URL points to a base64 image string
+                decodeAndSetImage(bytesImage!);
+              });
+            } else {
+              print('No image returned from the API');
             }
+          } catch (e) {
+            print('Error calling OpenAI image generation API: $e');
+          }
         } else {
           print("Content is not safe for children.");
           _speak("Sorry, content issue. Try again");
@@ -462,7 +501,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
@@ -476,11 +516,13 @@ class _ImagenScreenState extends State<ImagenScreen> {
     }
 
     try {
-      ByteData? byteData = await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+          await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
-      String filename = 'generated_image_${DateTime.now().millisecondsSinceEpoch}.png';
+      String filename =
+          'generated_image_${DateTime.now().millisecondsSinceEpoch}.png';
       File imgFile = File('$directory/$filename');
       await imgFile.writeAsBytes(pngBytes);
 
@@ -497,9 +539,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
   }
 
   Future<void> _loadImageFromLibrary() async {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => ImagePickerScreen(onSelect: (File file) {
-      _setImage(file);
-    })));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => ImagePickerScreen(onSelect: (File file) {
+              _setImage(file);
+            })));
   }
 
   void _setImage(File file) async {
@@ -519,11 +562,13 @@ class _ImagenScreenState extends State<ImagenScreen> {
   }
 
   void _stop_speech() async {
-      await flutterTts.stop();
+    await flutterTts.stop();
   }
+
   void _listen() async {
     if (!_isListening) {
-      await _speak(getMessageForVoicePrompting(_aiMode)); //"Can you tell me what you'd like to draw?");
+      await _speak(getMessageForVoicePrompting(
+          _aiMode)); //"Can you tell me what you'd like to draw?");
       if (_speechEnabled) {
         setState(() => _isListening = true);
         _speechToText.listen(
@@ -531,7 +576,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
             setState(() {
               _sttText = result.recognizedWords;
             });
-            _overlayEntry?.markNeedsBuild();  // Rebuild overlay with new text
+            _overlayEntry?.markNeedsBuild(); // Rebuild overlay with new text
           },
           listenFor: Duration(seconds: 30),
           pauseFor: Duration(seconds: 5),
@@ -548,10 +593,10 @@ class _ImagenScreenState extends State<ImagenScreen> {
       setState(() => _isListening = false);
       _speechToText.stop();
       _removeOverlay();
-      if(_sttText.isNotEmpty) {
-        if(_aiMode == AiMode.PromptToImage) {
+      if (_sttText.isNotEmpty) {
+        if (_aiMode == AiMode.PromptToImage) {
           generatePicture(context, AiMode.PromptToImage);
-        } else if(_aiMode == AiMode.Explore) {
+        } else if (_aiMode == AiMode.Explore) {
           takeSnapshotAndAnalyze(context, _aiMode);
         }
       }
@@ -607,8 +652,8 @@ class SketchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Draw the white background
-    canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.white);
 
     // Draw hints or the image overlay
     if (image != null) {

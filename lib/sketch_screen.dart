@@ -12,15 +12,15 @@ import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 
-enum AiMode { Analysis, ImageToTrace, SketchToImage, PromptToImage }
+enum AiMode { Analysis, SketchToImage }
 
 class SketchScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
-  const SketchScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
+  const SketchScreen(
+      {super.key, required this.geminiApiKey, required this.openaiApiKey});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -43,10 +43,8 @@ class _SketchScreenState extends State<SketchScreen> {
   double iconWidth = 80;
   double iconHeight = 80;
 
-  stt.SpeechToText _speechToText = stt.SpeechToText();
   bool _isListening = false;
   bool _speechEnabled = false;
-  String _sttText = "";
   OverlayEntry? _overlayEntry;
 
   String getPrompt(AiMode mode) {
@@ -55,11 +53,6 @@ class _SketchScreenState extends State<SketchScreen> {
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
       case AiMode.SketchToImage:
         return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image should closely resemble the drawing, but colorful";
-      case AiMode.ImageToTrace:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image will be used to learn drawing by tracing over. Instruct the model to generate black and traceable line drawing. Generate a suitable prompt with length below 1000 characters";
-      case AiMode.PromptToImage:
-        return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
-            "Elaborate the child's requirement $_sttText and  generate the prompt to create the image";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -71,10 +64,6 @@ class _SketchScreenState extends State<SketchScreen> {
         return "I will be analyzing your drawing. Please wait";
       case AiMode.SketchToImage:
         return "I will convert your sketch to an image. Please wait";
-      case AiMode.ImageToTrace:
-        return "I will convert the image to traceable sketch. Please wait";
-      case AiMode.PromptToImage:
-        return "Generating the picture. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -85,142 +74,153 @@ class _SketchScreenState extends State<SketchScreen> {
     super.initState();
     _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
-    _initSpeech();
   }
 
   @override
   void dispose() {
-    if (_isListening) {
-      _speechToText.stop();
-    }
-
-    _removeOverlay();
     flutterTts.stop();
     super.dispose();
   }
 
-  void _initSpeech() async {
-    _speechEnabled = await _speechToText.initialize();
-    setState(() {});
-  }
-
   void _initTts() {
     flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(1.0); // Higher pitch often perceived as friendlier by children
-    flutterTts.setSpeechRate(0.4); // Slower rate for better comprehension by young children
-    flutterTts.awaitSpeakCompletion(true); // Wait for spoken feedback to complete
+    flutterTts.setPitch(
+        1.0); // Higher pitch often perceived as friendlier by children
+    flutterTts.setSpeechRate(
+        0.4); // Slower rate for better comprehension by young children
+    flutterTts
+        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle(
           // Status bar color
           statusBarColor: Colors.deepPurple,
-
           // Status bar brightness (optional)
           statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
           statusBarBrightness: Brightness.light, // For iOS (dark icons)
         ),
-        title: Text('Doodle Dragon'),
         backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.red,
-        toolbarHeight: isLandscape ? 0 : 150,
-
-        actions: <Widget>[
-          IconButton(
-            icon: Image.asset("assets/delete.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                points.clear(); // Clear all points
-              });
-            },
-            tooltip: 'Clear Sketch',
-          ),
-          IconButton(
-            icon: showSketch ? Image.asset("assets/visibility_on.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/visibility_off.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                showSketch = !showSketch;
-              });
-            },
-          ),
-          IconButton(
-            icon: isErasing ? Image.asset("assets/brush.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/eraser.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                isErasing = !isErasing;
-              });
-            },
-            tooltip: 'Toggle Erase',
-          ),
-          IconButton(
-            icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: shareCanvas,
-          ),
-        ],
+        toolbarHeight: 150,
+        titleSpacing: 0,
+        title: Column(
+          children: <Widget>[
+            Text('Sketching',
+                style: TextStyle(
+                    color: Colors.white)), // Adjust text style as needed
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/delete.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: () {
+                      setState(() {
+                        points.clear(); // Clear all points
+                      });
+                    },
+                    tooltip: 'Clear Sketch',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: showSketch
+                        ? Image.asset("assets/visibility_on.png",
+                        width: iconWidth,
+                        height: iconHeight,
+                        fit: BoxFit.fill)
+                        : Image.asset("assets/visibility_off.png",
+                        width: iconWidth,
+                        height: iconHeight,
+                        fit: BoxFit.fill),
+                    onPressed: () {
+                      setState(() {
+                        showSketch = !showSketch;
+                      });
+                    },
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/share.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: shareCanvas,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      body: Row( // Use Row for main layout
+      body: Row(
+        // Use Row for main layout
         children: [
-          Expanded( // Canvas takes the available space
+          Expanded(
+            // Canvas takes the available space
             child: buildBody(),
           ),
-          if(isLandscape) controlPanelLandscape(),
+          if (isLandscape) controlPanelLandscape(),
         ],
       ),
-      bottomNavigationBar: isLandscape ? null : BottomAppBar(
-        color: Colors.lightBlue,
-        height: 180,
-        child: controlPanelPortrait(),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _listen,
-        child: Icon(_isListening ? Icons.mic : Icons.mic_none),
-      ),
+      bottomNavigationBar: isLandscape
+          ? null
+          : BottomAppBar(
+              color: Colors.lightBlue,
+              height: 180,
+              child: controlPanelPortrait(),
+            ),
     );
   }
 
   Widget buildBody() => Column(
-    children: [
-      Expanded(
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            setState(() {
-              RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight = 150;//AppBar().toolbarHeight!;
-              double topPadding = MediaQuery.of(context).padding.top;
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  double appBarHeight = 150; //AppBar().toolbarHeight!;
+                  double topPadding = MediaQuery.of(context).padding.top;
 
-              Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
-              Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                  Offset adjustedPosition = details.globalPosition -
+                      Offset(0, appBarHeight + topPadding);
+                  Offset localPosition =
+                      renderBox.globalToLocal(adjustedPosition);
 
-              if (!isErasing) {
-                points.add(localPosition);
-              } else {
-                points = points.where((p) => p == null || (p - localPosition).distance > 20).toList();
-              }
-            });
-          },
-          onPanEnd: (details) => setState(() => points.add(null)),
-          child: RepaintBoundary(
-            key: repaintBoundaryKey,
-            child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage, _transparencyLevels[_currentTransparencyLevel]),
-              child: Container(),
+                  if (!isErasing) {
+                    points.add(localPosition);
+                  } else {
+                    points = points
+                        .where((p) =>
+                            p == null || (p - localPosition).distance > 20)
+                        .toList();
+                  }
+                });
+              },
+              onPanEnd: (details) => setState(() => points.add(null)),
+              child: RepaintBoundary(
+                key: repaintBoundaryKey,
+                child: CustomPaint(
+                  painter: SketchPainter(points, showSketch, generatedImage,
+                      _transparencyLevels[_currentTransparencyLevel]),
+                  child: Container(),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ],
-  );
-
+        ],
+      );
 
   Widget controlPanelLandscape() {
-    return  Container(
+    return Container(
       width: 80, // Adjust width as needed
       color: Theme.of(context).primaryColor,
       child: Column(
@@ -237,34 +237,45 @@ class _SketchScreenState extends State<SketchScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(width: 16),
-
         IconButton(
-          icon: Image.asset("assets/analysis.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: isErasing
+              ? Image.asset("assets/brush.png",
+                  width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+              : Image.asset("assets/eraser.png",
+                  width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          onPressed: () {
+            setState(() {
+              isErasing = !isErasing;
+            });
+          },
+          tooltip: 'Toggle Erase',
+        ),
+        IconButton(
+          icon: Image.asset("assets/analysis.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Analysis);
+            takeSnapshotAndAnalyze(context, AiMode.Analysis);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/sketch_to_image.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/sketch_to_image.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.SketchToImage);
+            takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/image_to_trace.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.ImageToTrace);
-          },
-        ),
-        IconButton(
-          icon: Image.asset("assets/transparency.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
+          icon: Image.asset("assets/transparency.png",
+              width: iconWidth,
+              height: iconHeight,
+              fit: BoxFit.fill), // Example icon - you can customize
           color: Colors.deepPurple,
           onPressed: () {
             setState(() {
-              _currentTransparencyLevel = (_currentTransparencyLevel + 1) % _transparencyLevels.length;
+              _currentTransparencyLevel =
+                  (_currentTransparencyLevel + 1) % _transparencyLevels.length;
             });
           },
         ),
@@ -274,7 +285,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
-    return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
+    return safetyRatings
+        .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
   void decodeAndSetImage(Uint8List imageData) async {
@@ -287,9 +299,11 @@ class _SketchScreenState extends State<SketchScreen> {
 
   void shareCanvas() async {
     try {
-      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
@@ -297,27 +311,31 @@ class _SketchScreenState extends State<SketchScreen> {
       await imgFile.writeAsBytes(pngBytes);
 
       // Using Share.shareXFiles from share_plus
-      await Share.shareXFiles([XFile(imgFile.path)], text: 'Check out my sketch!');
+      await Share.shareXFiles([XFile(imgFile.path)],
+          text: 'Check out my sketch!');
     } catch (e) {
       print('Error sharing canvas: $e');
     }
   }
+
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true);   // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       // String base64String = await capturePng();
@@ -335,10 +353,7 @@ class _SketchScreenState extends State<SketchScreen> {
             "parts": [
               {"text": promptText},
               {
-                "inlineData": {
-                  "mimeType": "image/png",
-                  "data": base64String
-                }
+                "inlineData": {"mimeType": "image/png", "data": base64String}
               }
             ]
           }
@@ -373,31 +388,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
-            }
-          } else if (selectedMode == AiMode.ImageToTrace) {
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
-
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
+                  Uint8List bytesImage = base64Decode(imageResponse.data.first
+                      .b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
                 });
               } else {
@@ -416,23 +408,25 @@ class _SketchScreenState extends State<SketchScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
 
   void generatePicture(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true); // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-
       String promptText = getPrompt(selectedMode);
       String jsonBody = jsonEncode({
         "contents": [
@@ -457,28 +451,28 @@ class _SketchScreenState extends State<SketchScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
+          // Generate an image from a text prompt
+          try {
+            final imageResponse = await OpenAI.instance.image.create(
+              model: 'dall-e-3',
+              prompt: responseText,
+              n: 1,
+              size: OpenAIImageSize.size1024,
+              responseFormat: OpenAIImageResponseFormat.b64Json,
+            );
 
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
+            if (imageResponse.data.isNotEmpty) {
+              setState(() {
+                Uint8List bytesImage = base64Decode(imageResponse.data.first
+                    .b64Json!); // Assuming URL points to a base64 image string
+                decodeAndSetImage(bytesImage!);
+              });
+            } else {
+              print('No image returned from the API');
             }
+          } catch (e) {
+            print('Error calling OpenAI image generation API: $e');
+          }
         } else {
           print("Content is not safe for children.");
           _speak("Sorry, content issue. Try again");
@@ -488,7 +482,8 @@ class _SketchScreenState extends State<SketchScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
@@ -503,70 +498,6 @@ class _SketchScreenState extends State<SketchScreen> {
       return completion.future; // Waits until speaking is completed
     }
   }
-
-  void _listen() async {
-    if (!_isListening) {
-      await _speak("Can you tell me what you'd like to draw?");
-      if (_speechEnabled) {
-        setState(() => _isListening = true);
-        _speechToText.listen(
-          onResult: (result) {
-            setState(() {
-              _sttText = result.recognizedWords;
-            });
-            _overlayEntry?.markNeedsBuild();  // Rebuild overlay with new text
-          },
-          listenFor: Duration(seconds: 30),
-          pauseFor: Duration(seconds: 5),
-        );
-        _showOverlay(context);
-      }
-    } else {
-      _stopListening();
-    }
-  }
-
-  void _stopListening() {
-    if (_isListening) {
-      setState(() => _isListening = false);
-      _speechToText.stop();
-      _removeOverlay();
-      if(_sttText.isNotEmpty) {
-        generatePicture(context, AiMode.PromptToImage);
-      }
-    }
-  }
-
-
-
-  void _showOverlay(BuildContext context) {
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 200,
-        right: 80,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _sttText,
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context)?.insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
 }
 
 class SketchPainter extends CustomPainter {
@@ -580,8 +511,8 @@ class SketchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Draw the white background
-    canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.white);
 
     // Draw hints or the image overlay
     if (image != null) {

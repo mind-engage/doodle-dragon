@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   children: <Widget>[
                     Image.asset('assets/pencil_icon.png', height: 60),
                     SizedBox(width: 10), // Spacing between the image and the text
-                    Text('Start Drawing!'),
+                    Text('Start Sketching!'),
                   ],
                 ),
               ),
