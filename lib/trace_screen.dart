@@ -27,7 +27,7 @@ class TraceScreen extends StatefulWidget {
   _TraceScreenState createState() => _TraceScreenState();
 }
 
-class _TraceScreenState extends State<TraceScreen> {
+class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStateMixin {
   List<ColoredPoint> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
@@ -60,16 +60,18 @@ class _TraceScreenState extends State<TraceScreen> {
   ];
   AiMode _aiMode = AiMode.PromptToImage;
   int learnerAge = 3;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
-  String getPrompt(AiMode mode) {
+  String getPrompt(AiMode mode, String userInput) {
     switch (mode) {
       case AiMode.Analysis:
         return "The attached sketch is traced by a child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
       case AiMode.PromptToImage:
         // TODO: Interactive prompting
-        // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$_sttText', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
+        // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
         return "You are an AI assistant collaborating with a $learnerAge-year-old child."
-          "Based on the child's input, '$_sttText', craft a clear, simple prompt for a text-to-image model."
+          "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
           "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
           "This outline should be easy for the child to trace.";
       default:
@@ -94,6 +96,7 @@ class _TraceScreenState extends State<TraceScreen> {
     _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
+    _initAnimation();
   }
 
   @override
@@ -101,7 +104,7 @@ class _TraceScreenState extends State<TraceScreen> {
     if (_isListening) {
       _speechToText.stop();
     }
-
+    _animationController.dispose();
     _removeOverlay();
     flutterTts.stop();
     super.dispose();
@@ -120,6 +123,22 @@ class _TraceScreenState extends State<TraceScreen> {
         0.4); // Slower rate for better comprehension by young children
     flutterTts
         .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
+  }
+
+  void _initAnimation() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 500), // Duration of half cycle of oscillation
+    );
+    _animation = Tween<double>(begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
+        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut))
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _animationController.reverse();
+        } else if (status == AnimationStatus.dismissed) {
+          _animationController.forward();
+        }
+      });
   }
 
   @override
@@ -188,17 +207,31 @@ class _TraceScreenState extends State<TraceScreen> {
               height: 180,
               child: controlPanelPortrait(),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _listen();
+      floatingActionButton: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: _animation.value,
+            child: FloatingActionButton(
+              onPressed: () {
+                _listen();
+              },
+              backgroundColor: Colors.transparent,
+              shape: CircleBorder(),
+              child: Image.asset(_isListening ? 'assets/robot_mic.png' : 'assets/robot_mic.png'),
+            ),
+          );
         },
-        backgroundColor: Colors.transparent,
-        shape: CircleBorder(),
-        child: _isListening
-            ? Image.asset('assets/robot_mic.png')
-            : Image.asset('assets/robot_mic.png'),
       ),
     );
+  }
+
+  void _animateMic(bool listening) {
+      if (listening) {
+        _animationController.forward();
+      } else {
+        _animationController.stop();
+      }
   }
 
   Widget buildBody() => Column(
@@ -290,7 +323,7 @@ class _TraceScreenState extends State<TraceScreen> {
               width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.Analysis);
+            takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
           },
         ),
         IconButton(
@@ -345,7 +378,7 @@ class _TraceScreenState extends State<TraceScreen> {
     }
   }
 
-  void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
+  void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode, String userInput) async {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
@@ -382,7 +415,7 @@ class _TraceScreenState extends State<TraceScreen> {
       String base64String = base64Encode(pngBytes);
       String base64StringBase = base64Encode(pngBytesBase);
 
-      String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
+      String promptText = getPrompt(selectedMode, userInput); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
         "contents": [
           {
@@ -430,7 +463,7 @@ class _TraceScreenState extends State<TraceScreen> {
     }
   }
 
-  void generatePicture(BuildContext context, AiMode selectedMode) async {
+  void generatePicture(BuildContext context, AiMode selectedMode, userInput) async {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
@@ -443,7 +476,7 @@ class _TraceScreenState extends State<TraceScreen> {
           Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-      String promptText = getPrompt(selectedMode);
+      String promptText = getPrompt(selectedMode, userInput);
       String jsonBody = jsonEncode({
         "contents": [
           {
@@ -517,6 +550,7 @@ class _TraceScreenState extends State<TraceScreen> {
 
   void _listen() async {
     if (!_isListening) {
+      _animateMic(true);
       await _speak("Can you tell me what you'd like to draw?");
       if (_speechEnabled) {
         setState(() => _isListening = true);
@@ -533,17 +567,21 @@ class _TraceScreenState extends State<TraceScreen> {
         _showOverlay(context);
       }
     } else {
-      _stopListening();
+      _animateMic(false);
+      _completeListening();
     }
   }
 
-  void _stopListening() {
+  void _completeListening() {
     if (_isListening) {
       setState(() => _isListening = false);
       _speechToText.stop();
       _removeOverlay();
       if (_sttText.isNotEmpty) {
-        generatePicture(context, AiMode.PromptToImage);
+        generatePicture(context, AiMode.PromptToImage, _sttText);
+        setState(() {
+          _sttText = "";
+        });
       }
     }
   }
