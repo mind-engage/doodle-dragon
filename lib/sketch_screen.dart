@@ -27,7 +27,7 @@ class SketchScreen extends StatefulWidget {
 }
 
 class _SketchScreenState extends State<SketchScreen> {
-  List<Offset?> points = [];
+  List<ColoredPoint> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
 
@@ -43,9 +43,14 @@ class _SketchScreenState extends State<SketchScreen> {
   double iconWidth = 80;
   double iconHeight = 80;
 
-  bool _isListening = false;
-  bool _speechEnabled = false;
-  OverlayEntry? _overlayEntry;
+  Color selectedColor = Colors.black; // Default color
+  List<Color> colorPalette = [
+    Colors.black,
+    Colors.red,
+    Colors.green,
+    Colors.blue,
+    Colors.yellow
+  ];
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -134,13 +139,13 @@ class _SketchScreenState extends State<SketchScreen> {
                   child: IconButton(
                     icon: showSketch
                         ? Image.asset("assets/visibility_on.png",
-                        width: iconWidth,
-                        height: iconHeight,
-                        fit: BoxFit.fill)
+                            width: iconWidth,
+                            height: iconHeight,
+                            fit: BoxFit.fill)
                         : Image.asset("assets/visibility_off.png",
-                        width: iconWidth,
-                        height: iconHeight,
-                        fit: BoxFit.fill),
+                            width: iconWidth,
+                            height: iconHeight,
+                            fit: BoxFit.fill),
                     onPressed: () {
                       setState(() {
                         showSketch = !showSketch;
@@ -167,7 +172,6 @@ class _SketchScreenState extends State<SketchScreen> {
             // Canvas takes the available space
             child: buildBody(),
           ),
-          if (isLandscape) controlPanelLandscape(),
         ],
       ),
       bottomNavigationBar: isLandscape
@@ -196,16 +200,18 @@ class _SketchScreenState extends State<SketchScreen> {
                       renderBox.globalToLocal(adjustedPosition);
 
                   if (!isErasing) {
-                    points.add(localPosition);
+                    points.add(ColoredPoint(localPosition, selectedColor));
                   } else {
                     points = points
                         .where((p) =>
-                            p == null || (p - localPosition).distance > 20)
+                            p.point == null ||
+                            (p.point! - localPosition).distance > 20)
                         .toList();
                   }
                 });
               },
-              onPanEnd: (details) => setState(() => points.add(null)),
+              onPanEnd: (details) =>
+                  setState(() => points.add(ColoredPoint(null, selectedColor))),
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
@@ -219,65 +225,82 @@ class _SketchScreenState extends State<SketchScreen> {
         ],
       );
 
-  Widget controlPanelLandscape() {
-    return Container(
-      width: 80, // Adjust width as needed
-      color: Theme.of(context).primaryColor,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
   Widget controlPanelPortrait() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(width: 16),
-        IconButton(
-          icon: isErasing
-              ? Image.asset("assets/brush.png",
-                  width: iconWidth, height: iconHeight, fit: BoxFit.fill)
-              : Image.asset("assets/eraser.png",
-                  width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          onPressed: () {
+        PopupMenuButton<Color>(
+          icon: Image.asset("assets/brush.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          itemBuilder: (BuildContext context) {
+            return colorPalette.map((Color color) {
+              return PopupMenuItem<Color>(
+                value: color,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  color: color,
+                ),
+              );
+            }).toList();
+          },
+          onSelected: (Color color) {
+            selectedColor = color;
             setState(() {
-              isErasing = !isErasing;
+              isErasing = false;
             });
           },
-          tooltip: 'Toggle Erase',
         ),
-        IconButton(
-          icon: Image.asset("assets/analysis.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.Analysis);
-          },
+        Flexible(
+          child: IconButton(
+            icon: isErasing
+                ? Image.asset("assets/eraser.png",
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                : Image.asset("assets/eraser.png",
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            onPressed: () {
+              setState(() {
+                isErasing = true;
+              });
+            },
+            tooltip: 'Toggle Erase',
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/sketch_to_image.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
-          },
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/analysis.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            onPressed: () {
+              takeSnapshotAndAnalyze(context, AiMode.Analysis);
+            },
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/transparency.png",
-              width: iconWidth,
-              height: iconHeight,
-              fit: BoxFit.fill), // Example icon - you can customize
-          color: Colors.deepPurple,
-          onPressed: () {
-            setState(() {
-              _currentTransparencyLevel =
-                  (_currentTransparencyLevel + 1) % _transparencyLevels.length;
-            });
-          },
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/sketch_to_image.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            onPressed: () {
+              takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
+            },
+          ),
+        ),
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/transparency.png",
+                width: iconWidth,
+                height: iconHeight,
+                fit: BoxFit.fill), // Example icon - you can customize
+            color: Colors.deepPurple,
+            onPressed: () {
+              setState(() {
+                _currentTransparencyLevel = (_currentTransparencyLevel + 1) %
+                    _transparencyLevels.length;
+              });
+            },
+          ),
         ),
       ],
     );
@@ -500,12 +523,18 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 }
 
+class ColoredPoint {
+  Offset? point;
+  Color color;
+
+  ColoredPoint(this.point, this.color);
+}
+
 class SketchPainter extends CustomPainter {
-  final List<Offset?> points;
+  final List<ColoredPoint> points;
   final bool showSketch;
   final ui.Image? image;
   final double transparency;
-
   SketchPainter(this.points, this.showSketch, this.image, this.transparency);
 
   @override
@@ -527,16 +556,15 @@ class SketchPainter extends CustomPainter {
       );
     }
 
-    // Draw the sketch
-    if (showSketch) {
-      Paint paint = Paint()
-        ..color = Colors.black
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = 5.0;
-      for (int i = 0; i < points.length - 1; i++) {
-        if (points[i] != null && points[i + 1] != null) {
-          canvas.drawLine(points[i]!, points[i + 1]!, paint);
-        }
+    Paint paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.0;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i].point != null && points[i + 1].point != null) {
+        paint.color =
+            points[i].color; // Use the color associated with the point
+        canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
       }
     }
   }
