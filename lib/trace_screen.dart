@@ -38,8 +38,8 @@ class _TraceScreenState extends State<TraceScreen> {
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
-  int _currentTransparencyLevel = 3;
+  List<double> _transparencyLevels = [0.0, 0.5, 1.0];
+  int _currentTransparencyLevel = 2;
 
   double iconWidth = 80;
   double iconHeight = 80;
@@ -59,14 +59,19 @@ class _TraceScreenState extends State<TraceScreen> {
     Colors.yellow
   ];
   AiMode _aiMode = AiMode.PromptToImage;
+  int learnerAge = 3;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
-        return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
+        return "The attached sketch is traced by a child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
       case AiMode.PromptToImage:
-        return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
-            "Elaborate the child's requirement $_sttText and  generate the prompt to create the image suitable for tracing over";
+        // TODO: Interactive prompting
+        // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$_sttText', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
+        return "You are an AI assistant collaborating with a $learnerAge-year-old child."
+          "Based on the child's input, '$_sttText', craft a clear, simple prompt for a text-to-image model."
+          "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
+          "This outline should be easy for the child to trace.";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -354,6 +359,10 @@ class _TraceScreenState extends State<TraceScreen> {
           await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
+      ByteData? byteDataBase =
+      await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytesBase = byteDataBase!.buffer.asUint8List();
+
       // String base64String = await capturePng();
       // Get the size of the boundary to pass to getPrompt
       Size size = boundary.size;
@@ -361,6 +370,7 @@ class _TraceScreenState extends State<TraceScreen> {
       double height = size.height;
 
       String base64String = base64Encode(pngBytes);
+      String base64StringBase = base64Encode(pngBytesBase);
 
       String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
@@ -370,6 +380,9 @@ class _TraceScreenState extends State<TraceScreen> {
               {"text": promptText},
               {
                 "inlineData": {"mimeType": "image/png", "data": base64String}
+              },
+              {
+                "inlineData": {"mimeType": "image/png", "data": base64StringBase}
               }
             ]
           }
@@ -447,7 +460,7 @@ class _TraceScreenState extends State<TraceScreen> {
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
-              model: 'dall-e-3',
+              model: 'dall-e-2',
               prompt: responseText,
               n: 1,
               size: OpenAIImageSize.size1024,
