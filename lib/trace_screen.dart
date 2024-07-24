@@ -15,19 +15,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 
-enum AiMode { Analysis, ImageToTrace, SketchToImage, PromptToImage }
+enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
 class TraceScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
-  const TraceScreen({super.key, required this.geminiApiKey, required this.openaiApiKey});
+  const TraceScreen(
+      {super.key, required this.geminiApiKey, required this.openaiApiKey});
 
   @override
   _TraceScreenState createState() => _TraceScreenState();
 }
 
 class _TraceScreenState extends State<TraceScreen> {
-  List<Offset?> points = [];
+  List<ColoredPoint> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
 
@@ -49,17 +50,23 @@ class _TraceScreenState extends State<TraceScreen> {
   String _sttText = "";
   OverlayEntry? _overlayEntry;
 
+  Color selectedColor = Colors.black; // Default color
+  List<Color> colorPalette = [
+    Colors.black,
+    Colors.red,
+    Colors.green,
+    Colors.blue,
+    Colors.yellow
+  ];
+  AiMode _aiMode = AiMode.PromptToImage;
+
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
         return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
-      case AiMode.SketchToImage:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image should closely resemble the drawing, but colorful";
-      case AiMode.ImageToTrace:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image will be used to learn drawing by tracing over. Instruct the model to generate black and traceable line drawing. Generate a suitable prompt with length below 1000 characters";
       case AiMode.PromptToImage:
         return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
-            "Elaborate the child's requirement $_sttText and  generate the prompt to create the image";
+            "Elaborate the child's requirement $_sttText and  generate the prompt to create the image suitable for tracing over";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -69,10 +76,6 @@ class _TraceScreenState extends State<TraceScreen> {
     switch (mode) {
       case AiMode.Analysis:
         return "I will be analyzing your drawing. Please wait";
-      case AiMode.SketchToImage:
-        return "I will convert your sketch to an image. Please wait";
-      case AiMode.ImageToTrace:
-        return "I will convert the image to traceable sketch. Please wait";
       case AiMode.PromptToImage:
         return "Generating the picture. Please wait";
       default:
@@ -106,14 +109,18 @@ class _TraceScreenState extends State<TraceScreen> {
 
   void _initTts() {
     flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(1.0); // Higher pitch often perceived as friendlier by children
-    flutterTts.setSpeechRate(0.4); // Slower rate for better comprehension by young children
-    flutterTts.awaitSpeakCompletion(true); // Wait for spoken feedback to complete
+    flutterTts.setPitch(
+        1.0); // Higher pitch often perceived as friendlier by children
+    flutterTts.setSpeechRate(
+        0.4); // Slower rate for better comprehension by young children
+    flutterTts
+        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       appBar: AppBar(
@@ -125,59 +132,57 @@ class _TraceScreenState extends State<TraceScreen> {
           statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
           statusBarBrightness: Brightness.light, // For iOS (dark icons)
         ),
-        title: Text('Doodle Dragon'),
         backgroundColor: Colors.lightBlue,
         foregroundColor: Colors.red,
-        toolbarHeight: isLandscape ? 0 : 150,
+        toolbarHeight: 150,
+        titleSpacing: 0,
+        title: Column(
+          children: <Widget>[
+            Text('Sketching',
+                style: TextStyle(
+                    color: Colors.white)), // Adjust text style as needed
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: () {
+                      setState(() {
+                        _aiMode = AiMode.PromptToImage;
+                      });
+                      _listen();
+                    },
+                    tooltip: 'Clear Sketch',
+                  ),
+                ),
 
-        actions: <Widget>[
-          IconButton(
-            icon: Image.asset("assets/delete.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                points.clear(); // Clear all points
-              });
-            },
-            tooltip: 'Clear Sketch',
-          ),
-          IconButton(
-            icon: showSketch ? Image.asset("assets/visibility_on.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/visibility_off.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                showSketch = !showSketch;
-              });
-            },
-          ),
-          IconButton(
-            icon: isErasing ? Image.asset("assets/brush.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill) :
-              Image.asset("assets/eraser.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: () {
-              setState(() {
-                isErasing = !isErasing;
-              });
-            },
-            tooltip: 'Toggle Erase',
-          ),
-          IconButton(
-            icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: shareCanvas,
-          ),
-        ],
+                IconButton(
+                  icon: Image.asset("assets/share.png",
+                      width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                  onPressed: shareCanvas,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      body: Row( // Use Row for main layout
+      body: Row(
+        // Use Row for main layout
         children: [
-          Expanded( // Canvas takes the available space
+          Expanded(
+            // Canvas takes the available space
             child: buildBody(),
           ),
-          if(isLandscape) controlPanelLandscape(),
         ],
       ),
-      bottomNavigationBar: isLandscape ? null : BottomAppBar(
-        color: Colors.lightBlue,
-        height: 180,
-        child: controlPanelPortrait(),
-      ),
+      bottomNavigationBar: isLandscape
+          ? null
+          : BottomAppBar(
+              color: Colors.lightBlue,
+              height: 180,
+              child: controlPanelPortrait(),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _listen,
         child: Icon(_isListening ? Icons.mic : Icons.mic_none),
@@ -186,85 +191,107 @@ class _TraceScreenState extends State<TraceScreen> {
   }
 
   Widget buildBody() => Column(
-    children: [
-      Expanded(
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            setState(() {
-              RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight = 150;//AppBar().toolbarHeight!;
-              double topPadding = MediaQuery.of(context).padding.top;
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  double appBarHeight = 150; //AppBar().toolbarHeight!;
+                  double topPadding = MediaQuery.of(context).padding.top;
 
-              Offset adjustedPosition = details.globalPosition - Offset(0, appBarHeight + topPadding);
-              Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                  Offset adjustedPosition = details.globalPosition -
+                      Offset(0, appBarHeight + topPadding);
+                  Offset localPosition =
+                      renderBox.globalToLocal(adjustedPosition);
 
-              if (!isErasing) {
-                points.add(localPosition);
-              } else {
-                points = points.where((p) => p == null || (p - localPosition).distance > 20).toList();
-              }
-            });
-          },
-          onPanEnd: (details) => setState(() => points.add(null)),
-          child: RepaintBoundary(
-            key: repaintBoundaryKey,
-            child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage, _transparencyLevels[_currentTransparencyLevel]),
-              child: Container(),
+                  if (!isErasing) {
+                    points.add(ColoredPoint(localPosition, selectedColor));
+                  } else {
+                    points = points
+                        .where((p) =>
+                            p.point == null ||
+                            (p.point! - localPosition).distance > 20)
+                        .toList();
+                  }
+                });
+              },
+              onPanEnd: (details) =>
+                  setState(() => points.add(ColoredPoint(null, selectedColor))),
+              child: RepaintBoundary(
+                key: repaintBoundaryKey,
+                child: CustomPaint(
+                  painter: SketchPainter(points, showSketch, generatedImage,
+                      _transparencyLevels[_currentTransparencyLevel]),
+                  child: Container(),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ],
-  );
-
-
-  Widget controlPanelLandscape() {
-    return  Container(
-      width: 80, // Adjust width as needed
-      color: Theme.of(context).primaryColor,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: 16),
         ],
-      ),
-    );
-  }
+      );
 
   Widget controlPanelPortrait() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(width: 16),
-
+        PopupMenuButton<Color>(
+          icon: Image.asset("assets/brush.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          itemBuilder: (BuildContext context) {
+            return colorPalette.map((Color color) {
+              return PopupMenuItem<Color>(
+                value: color,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  color: color,
+                ),
+              );
+            }).toList();
+          },
+          onSelected: (Color color) {
+            selectedColor = color;
+            setState(() {
+              isErasing = false;
+              showSketch = true;
+            });
+          },
+        ),
+        Flexible(
+          child: IconButton(
+            icon: isErasing
+                ? Image.asset("assets/eraser.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                : Image.asset("assets/eraser.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            onPressed: () {
+              setState(() {
+                isErasing = true;
+              });
+            },
+            tooltip: 'Toggle Erase',
+          ),
+        ),
         IconButton(
-          icon: Image.asset("assets/analysis.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+          icon: Image.asset("assets/analysis.png",
+              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
           onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.Analysis);
+            takeSnapshotAndAnalyze(context, AiMode.Analysis);
           },
         ),
         IconButton(
-          icon: Image.asset("assets/sketch_to_image.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.SketchToImage);
-          },
-        ),
-        IconButton(
-          icon: Image.asset("assets/image_to_trace.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context,  AiMode.ImageToTrace);
-          },
-        ),
-        IconButton(
-          icon: Image.asset("assets/transparency.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),  // Example icon - you can customize
+          icon: Image.asset("assets/transparency.png",
+              width: iconWidth,
+              height: iconHeight,
+              fit: BoxFit.fill), // Example icon - you can customize
           color: Colors.deepPurple,
           onPressed: () {
             setState(() {
-              _currentTransparencyLevel = (_currentTransparencyLevel + 1) % _transparencyLevels.length;
+              _currentTransparencyLevel =
+                  (_currentTransparencyLevel + 1) % _transparencyLevels.length;
             });
           },
         ),
@@ -274,7 +301,8 @@ class _TraceScreenState extends State<TraceScreen> {
 
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
-    return safetyRatings.every((rating) => rating['probability'] == 'NEGLIGIBLE');
+    return safetyRatings
+        .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
   void decodeAndSetImage(Uint8List imageData) async {
@@ -287,9 +315,11 @@ class _TraceScreenState extends State<TraceScreen> {
 
   void shareCanvas() async {
     try {
-      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
@@ -297,27 +327,31 @@ class _TraceScreenState extends State<TraceScreen> {
       await imgFile.writeAsBytes(pngBytes);
 
       // Using Share.shareXFiles from share_plus
-      await Share.shareXFiles([XFile(imgFile.path)], text: 'Check out my sketch!');
+      await Share.shareXFiles([XFile(imgFile.path)],
+          text: 'Check out my sketch!');
     } catch (e) {
       print('Error sharing canvas: $e');
     }
   }
+
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true);   // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       // String base64String = await capturePng();
@@ -335,10 +369,7 @@ class _TraceScreenState extends State<TraceScreen> {
             "parts": [
               {"text": promptText},
               {
-                "inlineData": {
-                  "mimeType": "image/png",
-                  "data": base64String
-                }
+                "inlineData": {"mimeType": "image/png", "data": base64String}
               }
             ]
           }
@@ -360,52 +391,6 @@ class _TraceScreenState extends State<TraceScreen> {
           print("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
             _speak(responseText);
-          } else if (selectedMode == AiMode.SketchToImage) {
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
-
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
-            }
-          } else if (selectedMode == AiMode.ImageToTrace) {
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
-
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
-            }
           }
         } else {
           print("Content is not safe for children.");
@@ -416,23 +401,25 @@ class _TraceScreenState extends State<TraceScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
 
   void generatePicture(BuildContext context, AiMode selectedMode) async {
-    setState(() => isLoading = true); // Set loading to true when starting the analysis
+    setState(() =>
+        isLoading = true); // Set loading to true when starting the analysis
 
     _speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) => Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) =>
+          Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-
       String promptText = getPrompt(selectedMode);
       String jsonBody = jsonEncode({
         "contents": [
@@ -457,28 +444,28 @@ class _TraceScreenState extends State<TraceScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
+          // Generate an image from a text prompt
+          try {
+            final imageResponse = await OpenAI.instance.image.create(
+              model: 'dall-e-3',
+              prompt: responseText,
+              n: 1,
+              size: OpenAIImageSize.size1024,
+              responseFormat: OpenAIImageResponseFormat.b64Json,
+            );
 
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(
-                      imageResponse.data.first.b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-              } else {
-                print('No image returned from the API');
-              }
-            } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
+            if (imageResponse.data.isNotEmpty) {
+              setState(() {
+                Uint8List bytesImage = base64Decode(imageResponse.data.first
+                    .b64Json!); // Assuming URL points to a base64 image string
+                decodeAndSetImage(bytesImage!);
+              });
+            } else {
+              print('No image returned from the API');
             }
+          } catch (e) {
+            print('Error calling OpenAI image generation API: $e');
+          }
         } else {
           print("Content is not safe for children.");
           _speak("Sorry, content issue. Try again");
@@ -488,7 +475,8 @@ class _TraceScreenState extends State<TraceScreen> {
         _speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() => isLoading = false); // Reset loading state after operation completes
+      setState(() =>
+          isLoading = false); // Reset loading state after operation completes
       Navigator.of(context).pop();
     }
   }
@@ -514,7 +502,7 @@ class _TraceScreenState extends State<TraceScreen> {
             setState(() {
               _sttText = result.recognizedWords;
             });
-            _overlayEntry?.markNeedsBuild();  // Rebuild overlay with new text
+            _overlayEntry?.markNeedsBuild(); // Rebuild overlay with new text
           },
           listenFor: Duration(seconds: 30),
           pauseFor: Duration(seconds: 5),
@@ -531,13 +519,11 @@ class _TraceScreenState extends State<TraceScreen> {
       setState(() => _isListening = false);
       _speechToText.stop();
       _removeOverlay();
-      if(_sttText.isNotEmpty) {
+      if (_sttText.isNotEmpty) {
         generatePicture(context, AiMode.PromptToImage);
       }
     }
   }
-
-
 
   void _showOverlay(BuildContext context) {
     _overlayEntry = OverlayEntry(
@@ -569,19 +555,25 @@ class _TraceScreenState extends State<TraceScreen> {
   }
 }
 
+class ColoredPoint {
+  Offset? point;
+  Color color;
+
+  ColoredPoint(this.point, this.color);
+}
+
 class SketchPainter extends CustomPainter {
-  final List<Offset?> points;
+  final List<ColoredPoint> points;
   final bool showSketch;
   final ui.Image? image;
   final double transparency;
-
   SketchPainter(this.points, this.showSketch, this.image, this.transparency);
 
   @override
   void paint(Canvas canvas, Size size) {
     // Draw the white background
-    canvas.drawRect(
-        Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.white);
 
     // Draw hints or the image overlay
     if (image != null) {
@@ -595,16 +587,16 @@ class SketchPainter extends CustomPainter {
             Colors.white.withOpacity(transparency), BlendMode.dstIn),
       );
     }
-
-    // Draw the sketch
     if (showSketch) {
       Paint paint = Paint()
-        ..color = Colors.black
         ..strokeCap = StrokeCap.round
         ..strokeWidth = 5.0;
+
       for (int i = 0; i < points.length - 1; i++) {
-        if (points[i] != null && points[i + 1] != null) {
-          canvas.drawLine(points[i]!, points[i + 1]!, paint);
+        if (points[i].point != null && points[i + 1].point != null) {
+          paint.color =
+              points[i].color; // Use the color associated with the point
+          canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
         }
       }
     }
