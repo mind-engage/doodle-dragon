@@ -189,8 +189,14 @@ class _TraceScreenState extends State<TraceScreen> {
               child: controlPanelPortrait(),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _listen,
-        child: Icon(_isListening ? Icons.mic : Icons.mic_none),
+        onPressed: () {
+          _listen();
+        },
+        backgroundColor: Colors.transparent,
+        shape: CircleBorder(),
+        child: _isListening
+            ? Image.asset('assets/robot_mic.png')
+            : Image.asset('assets/robot_mic.png'),
       ),
     );
   }
@@ -352,22 +358,26 @@ class _TraceScreenState extends State<TraceScreen> {
           Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
+
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
+
+      Size size = boundary.size;
+      double width = size.width;
+      double height = size.height;
+      /*
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+      */
+      ui.Image image = await drawPointsToImage(points,size);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       ByteData? byteDataBase =
       await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytesBase = byteDataBase!.buffer.asUint8List();
-
-      // String base64String = await capturePng();
-      // Get the size of the boundary to pass to getPrompt
-      Size size = boundary.size;
-      double width = size.width;
-      double height = size.height;
 
       String base64String = base64Encode(pngBytes);
       String base64StringBase = base64Encode(pngBytesBase);
@@ -565,6 +575,30 @@ class _TraceScreenState extends State<TraceScreen> {
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
+  }
+
+  Future<ui.Image> drawPointsToImage(List<ColoredPoint> points, Size size) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Draw the white background
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.white);
+
+    // Your painting logic
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.0;
+
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i].point != null && points[i + 1].point != null) {
+        canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
+      }
+    }
+
+    final picture = recorder.endRecording();
+    return picture.toImage(size.width.toInt(), size.height.toInt());
   }
 }
 
