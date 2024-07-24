@@ -55,9 +55,12 @@ class _SketchScreenState extends State<SketchScreen> {
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
-        return "The attached sketch is drawn by a child. Analyze and suggest improvements. The output is used to play to child using text to speech";
+        return "Describe this children's drawing in detail, imagining you are talking to the child."
+            "Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell."
+            "Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
       case AiMode.SketchToImage:
-        return "Generate a creative and detailed prompt describing this children's drawing to be used for text-to-image generation. The generated image should closely resemble the drawing, but colorful";
+        return "Imagine you're telling a magical art fairy how to make a super cool picture from this drawing."
+            "Describe what you see: What colors should it use? Are there any shiny objects? Is it a happy picture or maybe a bit spooky? Be as creative as you can!";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -121,36 +124,30 @@ class _SketchScreenState extends State<SketchScreen> {
                 style: TextStyle(
                     color: Colors.white)), // Adjust text style as needed
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/sketch_to_image.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    onPressed: () {
+                      takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
+                    },
+                  ),
+                ),
+
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/delete.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: () {
                       setState(() {
-                        points.clear(); // Clear all points
+                        showSketch = true;
+                        generatedImage = null;
                       });
                     },
                     tooltip: 'Clear Sketch',
-                  ),
-                ),
-                Flexible(
-                  child: IconButton(
-                    icon: showSketch
-                        ? Image.asset("assets/visibility_on.png",
-                            width: iconWidth,
-                            height: iconHeight,
-                            fit: BoxFit.fill)
-                        : Image.asset("assets/visibility_off.png",
-                            width: iconWidth,
-                            height: iconHeight,
-                            fit: BoxFit.fill),
-                    onPressed: () {
-                      setState(() {
-                        showSketch = !showSketch;
-                      });
-                    },
                   ),
                 ),
                 Flexible(
@@ -249,6 +246,7 @@ class _SketchScreenState extends State<SketchScreen> {
             selectedColor = color;
             setState(() {
               isErasing = false;
+              showSketch = true;
             });
           },
         ),
@@ -277,31 +275,7 @@ class _SketchScreenState extends State<SketchScreen> {
             },
           ),
         ),
-        Flexible(
-          child: IconButton(
-            icon: Image.asset("assets/sketch_to_image.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            color: Colors.white,
-            onPressed: () {
-              takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
-            },
-          ),
-        ),
-        Flexible(
-          child: IconButton(
-            icon: Image.asset("assets/transparency.png",
-                width: iconWidth,
-                height: iconHeight,
-                fit: BoxFit.fill), // Example icon - you can customize
-            color: Colors.deepPurple,
-            onPressed: () {
-              setState(() {
-                _currentTransparencyLevel = (_currentTransparencyLevel + 1) %
-                    _transparencyLevels.length;
-              });
-            },
-          ),
-        ),
+
       ],
     );
   }
@@ -414,6 +388,7 @@ class _SketchScreenState extends State<SketchScreen> {
                   Uint8List bytesImage = base64Decode(imageResponse.data.first
                       .b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
+                  showSketch = false;
                 });
               } else {
                 print('No image returned from the API');
@@ -555,16 +530,17 @@ class SketchPainter extends CustomPainter {
             Colors.white.withOpacity(transparency), BlendMode.dstIn),
       );
     }
+    if (showSketch) {
+      Paint paint = Paint()
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 5.0;
 
-    Paint paint = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
-
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i].point != null && points[i + 1].point != null) {
-        paint.color =
-            points[i].color; // Use the color associated with the point
-        canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
+      for (int i = 0; i < points.length - 1; i++) {
+        if (points[i].point != null && points[i + 1].point != null) {
+          paint.color =
+              points[i].color; // Use the color associated with the point
+          canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
+        }
       }
     }
   }
