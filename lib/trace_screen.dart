@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/tts_helper.dart';
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -34,7 +34,6 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   bool isErasing = false; // Add this line
 
   GlobalKey repaintBoundaryKey = GlobalKey();
-  FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
@@ -66,7 +65,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
 
   late SharedPreferences prefs;
   String learnerName = "John";
-
+  TtsHelper ttsHelper = TtsHelper();
 
   String getPrompt(AiMode mode, String userInput) {
     switch (mode) {
@@ -99,7 +98,6 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
     loadSettings();
-    _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
     _initAnimation();
@@ -112,7 +110,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     }
     _animationController.dispose();
     _removeOverlay();
-    flutterTts.stop();
+    ttsHelper.stop();
     super.dispose();
   }
 
@@ -127,16 +125,6 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
-  }
-
-  void _initTts() {
-    flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(
-        1.0); // Higher pitch often perceived as friendlier by children
-    flutterTts.setSpeechRate(
-        0.4); // Slower rate for better comprehension by young children
-    flutterTts
-        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   void _initAnimation() {
@@ -176,7 +164,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
         titleSpacing: 0,
         title: Column(
           children: <Widget>[
-            Text('Sketching',
+            Text('Tracing',
                 style: TextStyle(
                     color: Colors.white)), // Adjust text style as needed
             Row(
@@ -396,7 +384,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
-    _speak(getMessageToUser(selectedMode));
+    ttsHelper.speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -460,15 +448,15 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
-            _speak(responseText);
+            ttsHelper.speak(responseText);
           }
         } else {
           print("Content is not safe for children.");
-          _speak("Sorry, content issue. Try again");
+          ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         print("Failed to get response: ${response.body}");
-        _speak("Sorry, network issue. Try again");
+        ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
@@ -481,7 +469,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
-    _speak(getMessageToUser(selectedMode));
+    ttsHelper.speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -538,11 +526,11 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
           }
         } else {
           print("Content is not safe for children.");
-          _speak("Sorry, content issue. Try again");
+          ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         print("Failed to get response: ${response.body}");
-        _speak("Sorry, network issue. Try again");
+        ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
@@ -551,21 +539,10 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _speak(String text) async {
-    if (text.isNotEmpty) {
-      var completion = Completer<void>();
-      flutterTts.setCompletionHandler(() {
-        completion.complete();
-      });
-      await flutterTts.speak(text);
-      return completion.future; // Waits until speaking is completed
-    }
-  }
-
   void _listen() async {
     if (!_isListening) {
       _animateMic(true);
-      await _speak("Can you tell me what you'd like to draw?");
+      await ttsHelper.speak("Can you tell me what you'd like to draw?");
       if (_speechEnabled) {
         setState(() => _isListening = true);
         _speechToText.listen(

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
@@ -16,6 +15,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 import 'image_picker_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/tts_helper.dart';
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -35,7 +35,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
   bool isErasing = false; // Add this line
 
   GlobalKey repaintBoundaryKey = GlobalKey();
-  FlutterTts flutterTts = FlutterTts();
   bool isLoading = false;
   ui.Image? generatedImage;
 
@@ -54,6 +53,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   late SharedPreferences prefs;
   String learnerName = "John";
   int learnerAge = 3;
+  TtsHelper ttsHelper = TtsHelper();
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -104,7 +104,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
   void initState() {
     super.initState();
     loadSettings();
-    _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
   }
@@ -114,9 +113,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
     if (_isListening) {
       _speechToText.stop();
     }
+    ttsHelper.stop();
 
     _removeOverlay();
-    flutterTts.stop();
     super.dispose();
   }
 
@@ -131,16 +130,6 @@ class _ImagenScreenState extends State<ImagenScreen> {
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
-  }
-
-  void _initTts() {
-    flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(
-        1.0); // Higher pitch often perceived as friendlier by children
-    flutterTts.setSpeechRate(
-        0.4); // Slower rate for better comprehension by young children
-    flutterTts
-        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   @override
@@ -305,7 +294,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
               fit: BoxFit.fill), // Example icon - you can customize
           color: Colors.deepPurple,
           onPressed: () {
-            _stop_speech();
+            ttsHelper.stop();
             _abortListening();
           },
         ),
@@ -352,7 +341,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
-    _speak(getWaitMessageToUser(selectedMode));
+    ttsHelper.speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -404,11 +393,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
           String responseText = candidate['content']['parts'][0]['text'];
           print("Response from model: $responseText");
           if (selectedMode == AiMode.Story) {
-            _speak(responseText);
+            ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Poetry) {
-            _speak(responseText);
+            ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Explore) {
-            _speak(responseText);
+            ttsHelper.speak(responseText);
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -434,11 +423,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
           }
         } else {
           print("Content is not safe for children.");
-          _speak("Sorry, content issue. Try again");
+          ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         print("Failed to get response: ${response.body}");
-        _speak("Sorry, network issue. Try again");
+        ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
@@ -451,7 +440,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
-    _speak(getWaitMessageToUser(selectedMode));
+    ttsHelper.speak(getWaitMessageToUser(selectedMode));
 
     showDialog(
       context: context,
@@ -508,11 +497,11 @@ class _ImagenScreenState extends State<ImagenScreen> {
           }
         } else {
           print("Content is not safe for children.");
-          _speak("Sorry, content issue. Try again");
+          ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         print("Failed to get response: ${response.body}");
-        _speak("Sorry, network issue. Try again");
+        ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
@@ -564,24 +553,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
     decodeAndSetImage(bytes);
   }
 
-  Future<void> _speak(String text) async {
-    if (text.isNotEmpty) {
-      var completion = Completer<void>();
-      flutterTts.setCompletionHandler(() {
-        completion.complete();
-      });
-      await flutterTts.speak(text);
-      return completion.future; // Waits until speaking is completed
-    }
-  }
-
-  void _stop_speech() async {
-    await flutterTts.stop();
-  }
-
   void _listen() async {
     if (!_isListening) {
-      await _speak(getMessageForVoicePrompting(
+      await ttsHelper.speak(getMessageForVoicePrompting(
           _aiMode)); //"Can you tell me what you'd like to draw?");
       if (_speechEnabled) {
         setState(() => _isListening = true);
