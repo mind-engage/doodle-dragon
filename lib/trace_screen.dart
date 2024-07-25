@@ -15,6 +15,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
+import '../utils/trace_image_picker.dart';
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -28,7 +29,8 @@ class TraceScreen extends StatefulWidget {
   _TraceScreenState createState() => _TraceScreenState();
 }
 
-class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStateMixin {
+class _TraceScreenState extends State<TraceScreen>
+    with SingleTickerProviderStateMixin {
   List<ColoredPoint> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
@@ -75,9 +77,9 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
         // TODO: Interactive prompting
         // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
         return "You are an AI assistant collaborating with a $learnerAge year old child."
-          "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
-          "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
-          "This outline should be easy for the child to trace.";
+            "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
+            "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
+            "This outline should be easy for the child to trace.";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -92,6 +94,11 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
+  }
+
+  String getTraceLibrary() {
+    //int learnerAge
+    return "https://storage.googleapis.com/storage/v1/b/doodle-dragon/o?prefix=tracing/alphabets-preschool/&delimiter=/";
   }
 
   @override
@@ -120,6 +127,11 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
       learnerName = prefs.getString('learnerName') ?? "";
       learnerAge = prefs.getInt('learnerAge') ?? 3;
     });
+    _welcomeMessage();
+  }
+
+  void _welcomeMessage() {
+    ttsHelper.speak("Welcome $learnerName! Get an image to trace");
   }
 
   void _initSpeech() async {
@@ -130,10 +142,13 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   void _initAnimation() {
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 500), // Duration of half cycle of oscillation
+      duration:
+          Duration(milliseconds: 500), // Duration of half cycle of oscillation
     );
-    _animation = Tween<double>(begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
-        .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut))
+    _animation = Tween<double>(
+            begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
+        .animate(CurvedAnimation(
+            parent: _animationController, curve: Curves.easeInOut))
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _animationController.reverse();
@@ -172,7 +187,8 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
               children: <Widget>[
                 Flexible(
                   child: IconButton(
-                    icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    icon: Image.asset("assets/imagen_square.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: () {
                       setState(() {
                         _aiMode = AiMode.PromptToImage;
@@ -182,7 +198,14 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
                     tooltip: 'Clear Sketch',
                   ),
                 ),
-
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/library.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: _loadImageFromLibrary,
+                    tooltip: 'Load Image',
+                  ),
+                ),
                 IconButton(
                   icon: Image.asset("assets/share.png",
                       width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -220,7 +243,9 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
               },
               backgroundColor: Colors.transparent,
               shape: CircleBorder(),
-              child: Image.asset(_isListening ? 'assets/robot_mic.png' : 'assets/robot_mic.png'),
+              child: Image.asset(_isListening
+                  ? 'assets/robot_mic.png'
+                  : 'assets/robot_mic.png'),
             ),
           );
         },
@@ -229,11 +254,11 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   }
 
   void _animateMic(bool listening) {
-      if (listening) {
-        _animationController.forward();
-      } else {
-        _animationController.stop();
-      }
+    if (listening) {
+      _animationController.forward();
+    } else {
+      _animationController.stop();
+    }
   }
 
   Widget buildBody() => Column(
@@ -309,9 +334,9 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
           child: IconButton(
             icon: isErasing
                 ? Image.asset("assets/eraser.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill)
                 : Image.asset("assets/eraser.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed: () {
               setState(() {
                 isErasing = true;
@@ -359,6 +384,33 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     });
   }
 
+  // Helper function to download file from URL
+  Future<File> _downloadFile(String url, String fileName) async {
+    var response = await http.get(Uri.parse(url));
+    var bytes = response.bodyBytes;
+    String dir = (await getApplicationDocumentsDirectory()).path;
+    File file = File('$dir/$fileName');
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  Future<void> _loadImageFromLibrary() async {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => TraceImagePicker(
+            onSelect: (String imageUrl) async {
+              // Download the image from the URL
+              File imageFile =
+                  await _downloadFile(imageUrl, 'selected_image.png');
+              _setImage(imageFile);
+            },
+            folder: getTraceLibrary())));
+  }
+
+  void _setImage(File file) async {
+    final Uint8List bytes = await file.readAsBytes();
+    decodeAndSetImage(bytes);
+  }
+
   void shareCanvas() async {
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -380,7 +432,8 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     }
   }
 
-  void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode, String userInput) async {
+  void takeSnapshotAndAnalyze(
+      BuildContext context, AiMode selectedMode, String userInput) async {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
@@ -393,7 +446,6 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
           Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
 
@@ -406,18 +458,20 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
           await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
       */
-      ui.Image image = await drawPointsToImage(points,size);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      ui.Image image = await drawPointsToImage(points, size);
+      ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       ByteData? byteDataBase =
-      await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
+          await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytesBase = byteDataBase!.buffer.asUint8List();
 
       String base64String = base64Encode(pngBytes);
       String base64StringBase = base64Encode(pngBytesBase);
 
-      String promptText = getPrompt(selectedMode, userInput); //prompts[selectedMode]!;
+      String promptText =
+          getPrompt(selectedMode, userInput); //prompts[selectedMode]!;
       String jsonBody = jsonEncode({
         "contents": [
           {
@@ -427,7 +481,10 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
                 "inlineData": {"mimeType": "image/png", "data": base64String}
               },
               {
-                "inlineData": {"mimeType": "image/png", "data": base64StringBase}
+                "inlineData": {
+                  "mimeType": "image/png",
+                  "data": base64StringBase
+                }
               }
             ]
           }
@@ -465,7 +522,8 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     }
   }
 
-  void generatePicture(BuildContext context, AiMode selectedMode, userInput) async {
+  void generatePicture(
+      BuildContext context, AiMode selectedMode, userInput) async {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis
 
@@ -606,7 +664,8 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     _overlayEntry = null;
   }
 
-  Future<ui.Image> drawPointsToImage(List<ColoredPoint> points, Size size) async {
+  Future<ui.Image> drawPointsToImage(
+      List<ColoredPoint> points, Size size) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
