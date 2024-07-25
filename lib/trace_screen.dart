@@ -1,12 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
@@ -97,8 +94,15 @@ class _TraceScreenState extends State<TraceScreen>
   }
 
   String getTraceLibrary() {
-    //int learnerAge
-    return "https://storage.googleapis.com/storage/v1/b/doodle-dragon/o?prefix=tracing/alphabets-preschool/&delimiter=/";
+    const baseFolder =
+        "https://storage.googleapis.com/storage/v1/b/doodle-dragon/o?prefix=tracing/";
+    if (learnerAge < 4) {
+      return "${baseFolder}alphabets-preschool/&delimiter=/";
+    } else if (learnerAge < 6) {
+      return "${baseFolder}alphabets-animals/&delimiter=/";
+    } else {
+      return "${baseFolder}coloring/&delimiter=/";
+    }
   }
 
   @override
@@ -206,10 +210,12 @@ class _TraceScreenState extends State<TraceScreen>
                     tooltip: 'Load Image',
                   ),
                 ),
-                IconButton(
-                  icon: Image.asset("assets/share.png",
-                      width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                  onPressed: shareCanvas,
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/share.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: shareCanvas,
+                  ),
                 ),
               ],
             ),
@@ -244,8 +250,8 @@ class _TraceScreenState extends State<TraceScreen>
               backgroundColor: Colors.transparent,
               shape: CircleBorder(),
               child: Image.asset(_isListening
-                  ? 'assets/robot_mic.png'
-                  : 'assets/robot_mic.png'),
+                  ? 'assets/doodle_mic_on.png'
+                  : 'assets/doodle_mic_on.png'),
             ),
           );
         },
@@ -306,29 +312,30 @@ class _TraceScreenState extends State<TraceScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(width: 16),
-        PopupMenuButton<Color>(
-          icon: Image.asset("assets/brush.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          itemBuilder: (BuildContext context) {
-            return colorPalette.map((Color color) {
-              return PopupMenuItem<Color>(
-                value: color,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  color: color,
-                ),
-              );
-            }).toList();
-          },
-          onSelected: (Color color) {
-            selectedColor = color;
-            setState(() {
-              isErasing = false;
-              showSketch = true;
-            });
-          },
+        Flexible(
+          child: PopupMenuButton<Color>(
+            icon: Image.asset("assets/brush.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            itemBuilder: (BuildContext context) {
+              return colorPalette.map((Color color) {
+                return PopupMenuItem<Color>(
+                  value: color,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    color: color,
+                  ),
+                );
+              }).toList();
+            },
+            onSelected: (Color color) {
+              selectedColor = color;
+              setState(() {
+                isErasing = false;
+                showSketch = true;
+              });
+            },
+          ),
         ),
         Flexible(
           child: IconButton(
@@ -345,26 +352,30 @@ class _TraceScreenState extends State<TraceScreen>
             tooltip: 'Toggle Erase',
           ),
         ),
-        IconButton(
-          icon: Image.asset("assets/analysis.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
-          },
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/analysis.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            onPressed: () {
+              takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
+            },
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/transparency.png",
-              width: iconWidth,
-              height: iconHeight,
-              fit: BoxFit.fill), // Example icon - you can customize
-          color: Colors.deepPurple,
-          onPressed: () {
-            setState(() {
-              _currentTransparencyLevel =
-                  (_currentTransparencyLevel + 1) % _transparencyLevels.length;
-            });
-          },
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/transparency.png",
+                width: iconWidth,
+                height: iconHeight,
+                fit: BoxFit.fill), // Example icon - you can customize
+            color: Colors.deepPurple,
+            onPressed: () {
+              setState(() {
+                _currentTransparencyLevel = (_currentTransparencyLevel + 1) %
+                    _transparencyLevels.length;
+              });
+            },
+          ),
         ),
       ],
     );

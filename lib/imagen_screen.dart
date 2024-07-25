@@ -211,8 +211,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
           _listen();
         },
         child: _isListening
-            ? Image.asset('assets/robot_mic.png')
-            : Image.asset('assets/robot_mic.png'),
+            ? Image.asset('assets/doodle_mic_on.png')
+            : Image.asset('assets/doodle_mic_off.png'),
       ),
     );
   }
