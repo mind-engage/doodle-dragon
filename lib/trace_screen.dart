@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -63,14 +64,18 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   late AnimationController _animationController;
   late Animation<double> _animation;
 
+  late SharedPreferences prefs;
+  String learnerName = "John";
+
+
   String getPrompt(AiMode mode, String userInput) {
     switch (mode) {
       case AiMode.Analysis:
-        return "The attached sketch is traced by a child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
+        return "The attached sketch is traced by a $learnerAge old child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
       case AiMode.PromptToImage:
         // TODO: Interactive prompting
         // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
-        return "You are an AI assistant collaborating with a $learnerAge-year-old child."
+        return "You are an AI assistant collaborating with a $learnerAge year old child."
           "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
           "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
           "This outline should be easy for the child to trace.";
@@ -82,9 +87,9 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
-        return "I will be analyzing your drawing. Please wait";
+        return "$learnerName, I am looking at your tracing. Please wait";
       case AiMode.PromptToImage:
-        return "Generating the picture. Please wait";
+        return "$learnerName, Generating the picture. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -93,6 +98,7 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    loadSettings();
     _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
@@ -108,6 +114,14 @@ class _TraceScreenState extends State<TraceScreen> with SingleTickerProviderStat
     _removeOverlay();
     flutterTts.stop();
     super.dispose();
+  }
+
+  Future<void> loadSettings() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      learnerName = prefs.getString('learnerName') ?? "";
+      learnerAge = prefs.getInt('learnerAge') ?? 3;
+    });
   }
 
   void _initSpeech() async {

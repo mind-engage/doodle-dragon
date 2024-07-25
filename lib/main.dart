@@ -64,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Scaffold(
       appBar: AppBar(
         title: Text('Doodle Dragon'),
+        backgroundColor: Colors.deepOrange,
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.settings),

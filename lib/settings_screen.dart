@@ -96,22 +96,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Settings'),
+        backgroundColor: Color(0xFFC7B0FF),
         actions: [
           IconButton(
-            icon: Icon(Icons.save),
+            icon: Icon(Icons.save, color: Color(0xFF330066)),
             onPressed: () {
               // Optionally save all settings at once if necessary
             },
           ),
         ],
       ),
+      backgroundColor: Color(0xFFF8F2FF),
       body: ListView(
         children: [
           ListTile(
-            title: Text('Learner Name'),
+            title: Text('Learner Name',  style: TextStyle(color: Color(0xFF330066))),
             subtitle: TextField(
               decoration: InputDecoration(
                 hintText: "Enter learner's name",
+                hintStyle: TextStyle(color: Color(0xFF9D86D2)),
               ),
               controller: TextEditingController(text: learnerName),
               onSubmitted: (String value) {

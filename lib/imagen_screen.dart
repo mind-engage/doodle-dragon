@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
 import 'image_picker_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -46,9 +47,13 @@ class _ImagenScreenState extends State<ImagenScreen> {
   bool _speechEnabled = false;
   String _sttText = "";
   OverlayEntry? _overlayEntry;
-  int learnerAge = 3;
+
   // Default mode for voice listen commands
   AiMode _aiMode = AiMode.PromptToImage;
+
+  late SharedPreferences prefs;
+  String learnerName = "John";
+  int learnerAge = 3;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -98,6 +103,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
   @override
   void initState() {
     super.initState();
+    loadSettings();
     _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
@@ -112,6 +118,14 @@ class _ImagenScreenState extends State<ImagenScreen> {
     _removeOverlay();
     flutterTts.stop();
     super.dispose();
+  }
+
+  Future<void> loadSettings() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      learnerName = prefs.getString('learnerName') ?? "";
+      learnerAge = prefs.getInt('learnerAge') ?? 3;
+    });
   }
 
   void _initSpeech() async {

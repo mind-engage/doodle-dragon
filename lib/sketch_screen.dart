@@ -13,6 +13,7 @@ import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum AiMode { Analysis, SketchToImage }
 
@@ -52,14 +53,19 @@ class _SketchScreenState extends State<SketchScreen> {
     Colors.yellow
   ];
 
+  late SharedPreferences prefs;
+  String learnerName = "John";
+  int learnerAge = 3;
+
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
-        return "Describe this children's drawing in detail, imagining you are talking to the child."
+        return "Describe this children's drawing in detail, imagining you are talking to a $learnerAge old child."
             "Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell."
             "Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
       case AiMode.SketchToImage:
         return "Imagine you're telling a magical art fairy how to make a super cool picture from this drawing."
+            "The picture for a $learnerAge old child."
             "Describe what you see: What colors should it use? Are there any shiny objects? Is it a happy picture or maybe a bit spooky? Be as creative as you can!";
       default:
         return ""; // Handle any other cases or throw an error if needed
@@ -69,9 +75,9 @@ class _SketchScreenState extends State<SketchScreen> {
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
-        return "I will be analyzing your drawing. Please wait";
+        return "$learnerName, I am looking at your drawing. Please wait";
       case AiMode.SketchToImage:
-        return "I will convert your sketch to an image. Please wait";
+        return "$learnerName, I will convert your sketch to an image. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -80,6 +86,7 @@ class _SketchScreenState extends State<SketchScreen> {
   @override
   void initState() {
     super.initState();
+    loadSettings();
     _initTts();
     OpenAI.apiKey = widget.openaiApiKey;
   }
@@ -88,6 +95,14 @@ class _SketchScreenState extends State<SketchScreen> {
   void dispose() {
     flutterTts.stop();
     super.dispose();
+  }
+
+  Future<void> loadSettings() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      learnerName = prefs.getString('learnerName') ?? "";
+      learnerAge = prefs.getInt('learnerAge') ?? 3;
+    });
   }
 
   void _initTts() {
