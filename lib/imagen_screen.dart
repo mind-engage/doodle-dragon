@@ -68,9 +68,9 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
         return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a poem.";
       case AiMode.Explore:
         return "The attached image is generate by a $learnerAge year child using text to image."
-            "The child wants to explore more about the drawing. and has an enquiry."
+            "The child wants to explore more about the contents in this image. and has an enquiry."
             "child's enquiry: $_sttText"
-            "Generate a reply to the child in the context of supplied image. The answer should help child's language skills";
+            "Generate a reply to the child in the context of supplied image. The answer should help child's exploration curiosity. Your answer also will be used to generate an image";
       case AiMode.PromptToImage:
         return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
             "Elaborate the child's requirement $_sttText and  generate the prompt to create the image";
@@ -471,7 +471,7 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
           } else if (selectedMode == AiMode.Poetry) {
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Explore) {
-            ttsHelper.speak(responseText);
+            //ttsHelper.speak(responseText);
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
@@ -488,11 +488,14 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                       .b64Json!); // Assuming URL points to a base64 image string
                   decodeAndSetImage(bytesImage!);
                 });
+                ttsHelper.speak(responseText);
               } else {
                 print('No image returned from the API');
+                ttsHelper.speak("Failed to generate image. Try again");
               }
             } catch (e) {
               print('Error calling OpenAI image generation API: $e');
+              ttsHelper.speak("Failed to generate image. Try again");
             }
           }
         } else {
