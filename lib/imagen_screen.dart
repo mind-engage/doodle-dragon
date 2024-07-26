@@ -202,6 +202,8 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
               children: <Widget>[
                 Flexible(
                   child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: () {
                       setState(() {
@@ -209,17 +211,22 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                       });
                       _listen();
                     },
-                    tooltip: 'Clear Sketch',
+                    tooltip: 'Prompt to Image',
                   ),
                 ),
                 Flexible(
                   child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     icon: Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _saveGeneratedImage,
+                      tooltip: 'Save Image',
                   ),
                 ),
                 Flexible(
                   child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _loadImageFromLibrary,
                     tooltip: 'Load Image',
@@ -227,8 +234,11 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                 ),
                 Flexible(
                   child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: shareCanvas,
+                    tooltip: 'Share Image',
                   ),
                 ),
               ],
@@ -320,39 +330,47 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
           icon: Image.asset("assets/story.png",
               width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
+          highlightColor: Colors.orange,
           onPressed: () {
             takeSnapshotAndAnalyze(context, AiMode.Story);
           },
+          tooltip: 'Tell Story',
         ),
         IconButton(
           icon: Image.asset("assets/poem.png",
               width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
+          highlightColor: Colors.orange,
           onPressed: () {
             takeSnapshotAndAnalyze(context, AiMode.Poetry);
           },
+          tooltip: 'Tell a Poem',
         ),
         IconButton(
           icon: Image.asset("assets/explore.png",
               width: iconWidth, height: iconHeight, fit: BoxFit.fill),
           color: Colors.white,
+          highlightColor: Colors.orange,
           onPressed: () {
             setState(() {
               _aiMode = AiMode.Explore;
             });
             _listen();
           },
+          tooltip: 'Explore',
         ),
         IconButton(
           icon: Image.asset("assets/stop_voice.png",
               width: iconWidth,
               height: iconHeight,
               fit: BoxFit.fill), // Example icon - you can customize
-          color: Colors.deepPurple,
+          color: Colors.white,
+          highlightColor: Colors.orange,
           onPressed: () {
             ttsHelper.stop();
             _abortListening();
           },
+          tooltip: 'Stop Voice',
         ),
       ],
     );

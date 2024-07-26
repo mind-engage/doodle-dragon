@@ -212,19 +212,23 @@ class _TraceScreenState extends State<TraceScreen>
                   child: IconButton(
                     icon: Image.asset("assets/imagen_square.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     onPressed: () {
                       setState(() {
                         _aiMode = AiMode.PromptToImage;
                       });
                       _listen();
                     },
-                    tooltip: 'Clear Sketch',
+                    tooltip: 'Voice to Image',
                   ),
                 ),
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/library.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     onPressed: _loadImageFromLibrary,
                     tooltip: 'Load Image',
                   ),
@@ -233,7 +237,10 @@ class _TraceScreenState extends State<TraceScreen>
                   child: IconButton(
                     icon: Image.asset("assets/share.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     onPressed: shareCanvas,
+                    tooltip: 'Share Image',
                   ),
                 ),
               ],
@@ -356,12 +363,14 @@ class _TraceScreenState extends State<TraceScreen>
                     width: iconWidth, height: iconHeight, fit: BoxFit.fill)
                 : Image.asset("assets/eraser.png",
                     width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            highlightColor: Colors.orange,
             onPressed: () {
               setState(() {
                 isErasing = true;
               });
             },
-            tooltip: 'Toggle Erase',
+            tooltip: 'Erase',
           ),
         ),
         Flexible(
@@ -369,9 +378,11 @@ class _TraceScreenState extends State<TraceScreen>
             icon: Image.asset("assets/analysis.png",
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
+            highlightColor: Colors.orange,
             onPressed: () {
               takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
             },
+            tooltip: 'Feedback',
           ),
         ),
         Flexible(
@@ -380,13 +391,15 @@ class _TraceScreenState extends State<TraceScreen>
                 width: iconWidth,
                 height: iconHeight,
                 fit: BoxFit.fill), // Example icon - you can customize
-            color: Colors.deepPurple,
+            color: Colors.white,
+            highlightColor: Colors.orange,
             onPressed: () {
               setState(() {
                 _currentTransparencyLevel = (_currentTransparencyLevel + 1) %
                     _transparencyLevels.length;
               });
             },
+            tooltip: 'Transparency',
           ),
         ),
       ],

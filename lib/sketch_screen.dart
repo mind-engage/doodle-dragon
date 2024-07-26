@@ -149,9 +149,11 @@ class _SketchScreenState extends State<SketchScreen> {
                     icon: Image.asset("assets/sketch_to_image.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     color: Colors.white,
+                    highlightColor: Colors.orange,
                     onPressed: () {
                       takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
                     },
+                    tooltip: 'Sketch to Picture',
                   ),
                 ),
 
@@ -159,6 +161,8 @@ class _SketchScreenState extends State<SketchScreen> {
                   child: IconButton(
                     icon: Image.asset("assets/delete.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     onPressed: () {
                       setState(() {
                         showSketch = true;
@@ -173,6 +177,9 @@ class _SketchScreenState extends State<SketchScreen> {
                     icon: Image.asset("assets/share.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: shareCanvas,
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    tooltip: 'Share Image',
                   ),
                 ),
               ],
@@ -249,6 +256,7 @@ class _SketchScreenState extends State<SketchScreen> {
         PopupMenuButton<Color>(
           icon: Image.asset("assets/brush.png",
               width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+
           itemBuilder: (BuildContext context) {
             return colorPalette.map((Color color) {
               return PopupMenuItem<Color>(
@@ -276,12 +284,14 @@ class _SketchScreenState extends State<SketchScreen> {
                     width: iconWidth, height: iconHeight, fit: BoxFit.fill)
                 : Image.asset("assets/eraser.png",
                     width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            highlightColor: Colors.orange,
             onPressed: () {
               setState(() {
                 isErasing = true;
               });
             },
-            tooltip: 'Toggle Erase',
+            tooltip: 'Erase',
           ),
         ),
         Flexible(
@@ -289,9 +299,11 @@ class _SketchScreenState extends State<SketchScreen> {
             icon: Image.asset("assets/analysis.png",
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
+            highlightColor: Colors.orange,
             onPressed: () {
               takeSnapshotAndAnalyze(context, AiMode.Analysis);
             },
+            tooltip: 'Feedback',
           ),
         ),
 
