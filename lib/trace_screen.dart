@@ -13,6 +13,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/trace_image_picker.dart';
+import "../utils/user_messages.dart";
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -136,40 +137,11 @@ class _TraceScreenState extends State<TraceScreen>
     _welcomeMessage();
   }
 
-  final String welcomeMessage = """
-<speak>
-Welcome to the Doodle Dragon Tracing Studio!
-<p>Here's how to get creative:</p>
-<p>
-1. <emphasis level="strong">Talk to Doodle Dragon!</emphasis> (Tap the microphone button): Tell Doodle Dragon what you want to draw. It will create a fun outline just for you. 
-</p>
-<p>
-2. <emphasis level="strong">Choose from the Library!</emphasis> (Tap the book icon): Explore our collection of ready-to-trace pictures.
-</p>
-<p>
-3. <emphasis level="strong">Trace Like a Pro:</emphasis> Use your finger or stylus to trace over the lines. 
-</p>
-<p>
-4. <emphasis level="strong">Pick Your Colors!</emphasis> (Tap the paint palette): Select your favorite colors to make your tracing pop!
-</p>
-<p>
-5. <emphasis level="strong">Erase Mistakes!</emphasis> (Tap the eraser):  Whoops! Easily erase any lines you want to change. 
-</p>
-<p>
-6. <emphasis level="strong">Ask Doodle Dragon for Help!</emphasis> (Tap the magnifying glass):  Show your tracing to Doodle Dragon to get helpful tips.
-</p>
-<p>
-7. <emphasis level="strong">Control picture transparency!</emphasis> (Tap the layers icon repeatedly):  Adjusts visibility of picture to make the tracing easy!
-</p>
-<p>
-8. <emphasis level="strong">Share Your Masterpiece!</emphasis> (Tap the share icon):  Let your friends and family see your amazing artwork!
-</p>
-</speak>
-""";
+
 
   void _welcomeMessage() {
     _isWelcoming = true;
-    ttsHelper.speak(welcomeMessage);
+    ttsHelper.speak(userMessageTraceScreen);
   }
 
   void _stopWelcome() {

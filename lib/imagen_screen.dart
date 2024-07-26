@@ -16,6 +16,7 @@ import 'dart:async';
 import 'utils/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
+import "../utils/user_messages.dart";
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -135,44 +136,9 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
   }
 
 
-  final String welcomeMessage = """
-<speak>
-Hi there! Welcome to Imagening! 
-
-Ready to explore the world through amazing pictures? 
-
-Here's how it works:
-
-<p>
-1. <emphasis level="strong">Tell me what to draw!</emphasis> (Tap the microphone button, describe the picture and tap again): I'll try my best to draw it on the screen for you.
-</p>
-<p>
-2. <emphasis level="strong">Want a story about your picture?</emphasis> (Tap the storybook button): I can make up a fun story about what you drew! 
-</p>
-<p>
-3. <emphasis level="strong">How about a poem?</emphasis> (Tap the poem button): I can even write a poem about your drawing! 
-</p>
-<p>
-4. <emphasis level="strong">Have a question about your picture?</emphasis> (Tap the magnifying glass button and ask): I'll try my best to answer and generate a new picture! 
-</p>
-<p>
-5. <emphasis level="strong">Finished your masterpiece?</emphasis> (Tap the share button):  Let your friends and family see your awesome drawing!
-</p>
-<p>
-6. <emphasis level="strong">Want to save your drawing?</emphasis> (Tap the save button):  The picture will be saved! You can open it using book button.
-</p>
-
-<p>
-7. <emphasis level="strong">Want to stop the message or mic input?</emphasis> (Tap the stop button):  The message will stop!
-</p>
-
-Go ahead, I can't wait to see what you create!
-</speak>
-""";
-
   void _welcomeMessage() {
     _isWelcoming = true;
-    ttsHelper.speak(welcomeMessage);
+    ttsHelper.speak(userMessageImagenScreen);
   }
 
   void _stopWelcome() {

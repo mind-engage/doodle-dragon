@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
+import '../utils/user_messages.dart';
 
 enum AiMode { Analysis, SketchToImage }
 
@@ -110,10 +111,7 @@ class _SketchScreenState extends State<SketchScreen> {
   void _welcomeMessage() {
       _isWelcoming = true;
 
-    ttsHelper.speak( "Welcome to Sketching!"
-    "Feel free to draw anything your heart desires on the white canvas! Use the tools below to select different colors or erase mistakes. The thinking face will give you insights into your artwork, and the magic wand will transform your sketch into a picture."
-    "If you'd like to start over, the monkey can clear the picture for you, allowing you to use the magic wand again. Ready to share your creation? Just tap the share button!"
-    "Enjoy your sketching session!");
+    ttsHelper.speak( userMessageSketchScreen );
   }
   void _stopWelcome() {
     _isWelcoming = false;
