@@ -13,7 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
-import 'image_picker_screen.dart';
+import 'utils/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 
@@ -584,7 +584,7 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
 
   Future<void> _loadImageFromLibrary() async {
     Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => ImagePickerScreen(onSelect: (File file) {
+        builder: (context) => ImagePicker(onSelect: (File file) {
               _setImage(file);
             })));
   }

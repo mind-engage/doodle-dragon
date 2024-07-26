@@ -1,17 +1,17 @@
-// image_picker_screen.dart
+// image_picker.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
-class ImagePickerScreen extends StatefulWidget {
+class ImagePicker extends StatefulWidget {
   final Function(File) onSelect; // Callback to pass the selected file back
-  ImagePickerScreen({Key? key, required this.onSelect}) : super(key: key);
+  ImagePicker({Key? key, required this.onSelect}) : super(key: key);
 
   @override
-  _ImagePickerScreenState createState() => _ImagePickerScreenState();
+  _ImagePickerState createState() => _ImagePickerState();
 }
 
-class _ImagePickerScreenState extends State<ImagePickerScreen> {
+class _ImagePickerState extends State<ImagePicker> {
   List<File> images = [];
 
   @override
