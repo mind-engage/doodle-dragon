@@ -29,7 +29,7 @@ class ImagenScreen extends StatefulWidget {
   _ImagenScreenState createState() => _ImagenScreenState();
 }
 
-class _ImagenScreenState extends State<ImagenScreen> {
+class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderStateMixin {
   List<Offset?> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
@@ -54,7 +54,9 @@ class _ImagenScreenState extends State<ImagenScreen> {
   String learnerName = "John";
   int learnerAge = 3;
   TtsHelper ttsHelper = TtsHelper();
-
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -106,6 +108,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
     loadSettings();
     OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
+    _initAnimation();
   }
 
   @override
@@ -113,6 +116,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
     if (_isListening) {
       _speechToText.stop();
     }
+    _animationController.dispose();
     ttsHelper.stop();
 
     _removeOverlay();
@@ -130,6 +134,33 @@ class _ImagenScreenState extends State<ImagenScreen> {
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
+  }
+
+  void _initAnimation() {
+    _animationController = AnimationController(
+      vsync: this,
+      duration:
+      Duration(milliseconds: 500), // Duration of half cycle of oscillation
+    );
+    _animation = Tween<double>(
+        begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
+        .animate(CurvedAnimation(
+        parent: _animationController, curve: Curves.easeInOut))
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _animationController.reverse();
+        } else if (status == AnimationStatus.dismissed) {
+          _animationController.forward();
+        }
+      });
+  }
+
+  void _animateMic(bool listening) {
+    if (listening) {
+      _animationController.forward();
+    } else {
+      _animationController.stop();
+    }
   }
 
   @override
@@ -206,13 +237,23 @@ class _ImagenScreenState extends State<ImagenScreen> {
               height: 180,
               child: controlPanelPortrait(),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _listen();
+      floatingActionButton: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: _animation.value,
+            child: FloatingActionButton(
+              onPressed: () {
+                _listen();
+              },
+              backgroundColor: Colors.transparent,
+              shape: CircleBorder(),
+              child: Image.asset(_isListening
+                  ? 'assets/doodle_mic_on.png'
+                  : 'assets/doodle_mic_off.png'),
+            ),
+          );
         },
-        child: _isListening
-            ? Image.asset('assets/doodle_mic_on.png')
-            : Image.asset('assets/doodle_mic_off.png'),
       ),
     );
   }
@@ -555,8 +596,8 @@ class _ImagenScreenState extends State<ImagenScreen> {
 
   void _listen() async {
     if (!_isListening) {
-      await ttsHelper.speak(getMessageForVoicePrompting(
-          _aiMode)); //"Can you tell me what you'd like to draw?");
+      await ttsHelper.speak(getMessageForVoicePrompting(_aiMode));
+      _animateMic(true);
       if (_speechEnabled) {
         setState(() => _isListening = true);
         _speechToText.listen(
@@ -572,11 +613,12 @@ class _ImagenScreenState extends State<ImagenScreen> {
         _showOverlay(context);
       }
     } else {
-      _stopListening();
+      _animateMic(false);
+      _completeListening();
     }
   }
 
-  void _stopListening() {
+  void _completeListening() {
     if (_isListening) {
       setState(() => _isListening = false);
       _speechToText.stop();
@@ -597,6 +639,7 @@ class _ImagenScreenState extends State<ImagenScreen> {
       _speechToText.stop();
       _removeOverlay();
       _sttText = "";
+      _animateMic(false);
     }
   }
 

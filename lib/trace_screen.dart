@@ -162,6 +162,14 @@ class _TraceScreenState extends State<TraceScreen>
       });
   }
 
+  void _animateMic(bool listening) {
+    if (listening) {
+      _animationController.forward();
+    } else {
+      _animationController.stop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isLandscape =
@@ -251,20 +259,12 @@ class _TraceScreenState extends State<TraceScreen>
               shape: CircleBorder(),
               child: Image.asset(_isListening
                   ? 'assets/doodle_mic_on.png'
-                  : 'assets/doodle_mic_on.png'),
+                  : 'assets/doodle_mic_off.png'),
             ),
           );
         },
       ),
     );
-  }
-
-  void _animateMic(bool listening) {
-    if (listening) {
-      _animationController.forward();
-    } else {
-      _animationController.stop();
-    }
   }
 
   Widget buildBody() => Column(
@@ -610,8 +610,8 @@ class _TraceScreenState extends State<TraceScreen>
 
   void _listen() async {
     if (!_isListening) {
-      _animateMic(true);
       await ttsHelper.speak("Can you tell me what you'd like to draw?");
+      _animateMic(true);
       if (_speechEnabled) {
         setState(() => _isListening = true);
         _speechToText.listen(
