@@ -55,6 +55,7 @@ class _SketchScreenState extends State<SketchScreen> {
   late SharedPreferences prefs;
   String learnerName = "John";
   int learnerAge = 3;
+  bool _isWelcoming = false;
 
   TtsHelper ttsHelper = TtsHelper();
 
@@ -103,6 +104,20 @@ class _SketchScreenState extends State<SketchScreen> {
       learnerName = prefs.getString('learnerName') ?? "";
       learnerAge = prefs.getInt('learnerAge') ?? 3;
     });
+    _welcomeMessage();
+  }
+
+  void _welcomeMessage() {
+      _isWelcoming = true;
+
+    ttsHelper.speak( "Welcome to Sketching!"
+    "Feel free to draw anything your heart desires on the white canvas! Use the tools below to select different colors or erase mistakes. The thinking face will give you insights into your artwork, and the magic wand will transform your sketch into a picture."
+    "If you'd like to start over, the monkey can clear the picture for you, allowing you to use the magic wand again. Ready to share your creation? Just tap the share button!"
+    "Enjoy your sketching session!");
+  }
+  void _stopWelcome() {
+    _isWelcoming = false;
+    ttsHelper.stop();
   }
 
   @override
@@ -191,6 +206,7 @@ class _SketchScreenState extends State<SketchScreen> {
           Expanded(
             child: GestureDetector(
               onPanUpdate: (details) {
+                if (_isWelcoming) _stopWelcome();
                 setState(() {
                   RenderBox renderBox = context.findRenderObject() as RenderBox;
                   double appBarHeight = 150; //AppBar().toolbarHeight!;
