@@ -30,7 +30,8 @@ class ImagenScreen extends StatefulWidget {
   _ImagenScreenState createState() => _ImagenScreenState();
 }
 
-class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderStateMixin {
+class _ImagenScreenState extends State<ImagenScreen>
+    with SingleTickerProviderStateMixin {
   List<Offset?> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
@@ -59,7 +60,7 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
   TtsHelper ttsHelper = TtsHelper();
   late AnimationController _animationController;
   late Animation<double> _animation;
-  
+
   String getPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -135,7 +136,6 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
     _welcomeMessage();
   }
 
-
   void _welcomeMessage() {
     _isWelcoming = true;
     ttsHelper.speak(userMessageImagenScreen);
@@ -155,12 +155,12 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
     _animationController = AnimationController(
       vsync: this,
       duration:
-      Duration(milliseconds: 500), // Duration of half cycle of oscillation
+          Duration(milliseconds: 500), // Duration of half cycle of oscillation
     );
     _animation = Tween<double>(
-        begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
+            begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
         .animate(CurvedAnimation(
-        parent: _animationController, curve: Curves.easeInOut))
+            parent: _animationController, curve: Curves.easeInOut))
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           _animationController.reverse();
@@ -196,7 +196,9 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
         toolbarHeight: 150,
         title: Column(
           children: <Widget>[
-            Text('Imagening', style: TextStyle(color: Colors.white)), // Adjust text style as needed
+            Text('Imagening',
+                style: TextStyle(
+                    color: Colors.white)), // Adjust text style as needed
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
@@ -204,7 +206,8 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                   child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
-                    icon: Image.asset("assets/imagen_square.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    icon: Image.asset("assets/imagen_square.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: () {
                       setState(() {
                         _aiMode = AiMode.PromptToImage;
@@ -218,16 +221,18 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                   child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
-                    icon: Image.asset("assets/save.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    icon: Image.asset("assets/save.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _saveGeneratedImage,
-                      tooltip: 'Save Image',
+                    tooltip: 'Save Image',
                   ),
                 ),
                 Flexible(
                   child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
-                    icon: Image.asset("assets/library.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    icon: Image.asset("assets/library.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _loadImageFromLibrary,
                     tooltip: 'Load Image',
                   ),
@@ -236,7 +241,8 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
                   child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
-                    icon: Image.asset("assets/share.png", width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    icon: Image.asset("assets/share.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: shareCanvas,
                     tooltip: 'Share Image',
                   ),
@@ -325,52 +331,59 @@ class _ImagenScreenState extends State<ImagenScreen> with SingleTickerProviderSt
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(width: 16),
-        IconButton(
-          icon: Image.asset("assets/story.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          highlightColor: Colors.orange,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.Story);
-          },
-          tooltip: 'Tell Story',
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/story.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            onPressed: () {
+              takeSnapshotAndAnalyze(context, AiMode.Story);
+            },
+            tooltip: 'Tell Story',
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/poem.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          highlightColor: Colors.orange,
-          onPressed: () {
-            takeSnapshotAndAnalyze(context, AiMode.Poetry);
-          },
-          tooltip: 'Tell a Poem',
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/poem.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            onPressed: () {
+              takeSnapshotAndAnalyze(context, AiMode.Poetry);
+            },
+            tooltip: 'Tell a Poem',
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/explore.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-          color: Colors.white,
-          highlightColor: Colors.orange,
-          onPressed: () {
-            setState(() {
-              _aiMode = AiMode.Explore;
-            });
-            _listen();
-          },
-          tooltip: 'Explore',
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/explore.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            onPressed: () {
+              setState(() {
+                _aiMode = AiMode.Explore;
+              });
+              _listen();
+            },
+            tooltip: 'Explore',
+          ),
         ),
-        IconButton(
-          icon: Image.asset("assets/stop_voice.png",
-              width: iconWidth,
-              height: iconHeight,
-              fit: BoxFit.fill), // Example icon - you can customize
-          color: Colors.white,
-          highlightColor: Colors.orange,
-          onPressed: () {
-            ttsHelper.stop();
-            _abortListening();
-          },
-          tooltip: 'Stop Voice',
+        Flexible(
+          child: IconButton(
+            icon: Image.asset("assets/stop_voice.png",
+                width: iconWidth,
+                height: iconHeight,
+                fit: BoxFit.fill), // Example icon - you can customize
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            onPressed: () {
+              ttsHelper.stop();
+              _abortListening();
+            },
+            tooltip: 'Stop Voice',
+          ),
         ),
       ],
     );

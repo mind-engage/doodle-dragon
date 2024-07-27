@@ -32,9 +32,9 @@ dependencies:
     sdk: flutter
   http: ^1.1.0
   path_provider: ^2.0.1
-  image_picker: ^0.8.4+4
+  image_picker: ^1.1.2
   flutter_dotenv:
-  flutter_tts: ^3.3.3
+  flutter_tts: ^4.0.2
   dart_openai: ^5.1.0
   share_plus: ^9.0.0
   shared_preferences: ^2.0.13
@@ -53,7 +53,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

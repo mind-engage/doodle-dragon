@@ -91,6 +91,9 @@ class _SketchScreenState extends State<SketchScreen> {
     super.initState();
     loadSettings();
     OpenAI.apiKey = widget.openaiApiKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        _welcomeMessage();
+    });
   }
 
   @override
@@ -105,12 +108,10 @@ class _SketchScreenState extends State<SketchScreen> {
       learnerName = prefs.getString('learnerName') ?? "";
       learnerAge = prefs.getInt('learnerAge') ?? 3;
     });
-    _welcomeMessage();
   }
 
   void _welcomeMessage() {
-      _isWelcoming = true;
-
+    _isWelcoming = true;
     ttsHelper.speak( userMessageSketchScreen );
   }
   void _stopWelcome() {

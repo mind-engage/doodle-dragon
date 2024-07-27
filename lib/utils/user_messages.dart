@@ -1,4 +1,3 @@
-
 const userMessageSketchScreen = """
 <speak>
 Welcome to Sketching!
