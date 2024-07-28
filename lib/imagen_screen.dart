@@ -17,6 +17,7 @@ import 'utils/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import "../utils/user_messages.dart";
+import "../utils/sketch_painter.dart";
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -32,7 +33,7 @@ class ImagenScreen extends StatefulWidget {
 
 class _ImagenScreenState extends State<ImagenScreen>
     with SingleTickerProviderStateMixin {
-  List<Offset?> points = [];
+  List<ColoredPoint> points = [];
   bool showSketch = true;
   bool isErasing = false; // Add this line
 
@@ -60,6 +61,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   TtsHelper ttsHelper = TtsHelper();
   late AnimationController _animationController;
   late Animation<double> _animation;
+  Color selectedColor = Colors.black;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -305,20 +307,21 @@ class _ImagenScreenState extends State<ImagenScreen>
                       renderBox.globalToLocal(adjustedPosition);
 
                   if (!isErasing) {
-                    points.add(localPosition);
+                    points.add(ColoredPoint(localPosition, selectedColor));
                   } else {
                     points = points
                         .where((p) =>
-                            p == null || (p - localPosition).distance > 20)
+                    p.point == null ||
+                        (p.point! - localPosition).distance > 20)
                         .toList();
                   }
                 });
               },
-              onPanEnd: (details) => setState(() => points.add(null)),
+              onPanEnd: (details) => setState(() => points.add(ColoredPoint(null, selectedColor))),
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
-                  painter: SketchPainter(points, showSketch, generatedImage),
+                  painter: SketchPainter(points, showSketch, generatedImage, 1.0),
                   child: Container(),
                 ),
               ),
@@ -720,46 +723,4 @@ class _ImagenScreenState extends State<ImagenScreen>
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
-}
-
-class SketchPainter extends CustomPainter {
-  final List<Offset?> points;
-  final bool showSketch;
-  final ui.Image? image;
-
-  SketchPainter(this.points, this.showSketch, this.image);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Draw the white background
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = Colors.white);
-
-    // Draw hints or the image overlay
-    if (image != null) {
-      // Draw the image as an overlay if available
-      paintImage(
-        canvas: canvas,
-        rect: Rect.fromLTWH(0, 0, size.width, size.height),
-        image: image!,
-        fit: BoxFit.contain,
-      );
-    }
-
-    // Draw the sketch
-    if (showSketch) {
-      Paint paint = Paint()
-        ..color = Colors.black
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = 5.0;
-      for (int i = 0; i < points.length - 1; i++) {
-        if (points[i] != null && points[i + 1] != null) {
-          canvas.drawLine(points[i]!, points[i + 1]!, paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant SketchPainter oldDelegate) => true;
 }
