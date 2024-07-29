@@ -17,7 +17,7 @@ import 'utils/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import "../utils/user_messages.dart";
-import "../utils/sketch_painter.dart";
+import "../utils/sketch_painter_v2.dart";
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -62,6 +62,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   late AnimationController _animationController;
   late Animation<double> _animation;
   Color selectedColor = Colors.black;
+  double currentStrokeWidth = 5.0;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -307,7 +308,7 @@ class _ImagenScreenState extends State<ImagenScreen>
                       renderBox.globalToLocal(adjustedPosition);
 
                   if (!isErasing) {
-                    points.add(ColoredPoint(localPosition, selectedColor));
+                    points.add(ColoredPoint(localPosition, selectedColor, currentStrokeWidth));
                   } else {
                     points = points
                         .where((p) =>
@@ -317,7 +318,7 @@ class _ImagenScreenState extends State<ImagenScreen>
                   }
                 });
               },
-              onPanEnd: (details) => setState(() => points.add(ColoredPoint(null, selectedColor))),
+              onPanEnd: (details) => setState(() => points.add(ColoredPoint(null, selectedColor, currentStrokeWidth))),
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
