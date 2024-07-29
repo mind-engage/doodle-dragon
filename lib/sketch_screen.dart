@@ -15,7 +15,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/user_messages.dart';
-import '../utils/sketch_painter.dart';
+import '../utils/sketch_painter_v2.dart';
 
 enum AiMode { Analysis, SketchToImage }
 
@@ -46,6 +46,7 @@ class _SketchScreenState extends State<SketchScreen> {
   double iconHeight = 80;
 
   Color selectedColor = Colors.black; // Default color
+  double currentStrokeWidth = 5.0;
   List<Color> colorPalette = [
     Colors.black,
     Colors.red,
@@ -93,7 +94,7 @@ class _SketchScreenState extends State<SketchScreen> {
     loadSettings();
     OpenAI.apiKey = widget.openaiApiKey;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-        _welcomeMessage();
+      _welcomeMessage();
     });
   }
 
@@ -113,8 +114,9 @@ class _SketchScreenState extends State<SketchScreen> {
 
   void _welcomeMessage() {
     _isWelcoming = true;
-    ttsHelper.speak( userMessageSketchScreen );
+    ttsHelper.speak(userMessageSketchScreen);
   }
+
   void _stopWelcome() {
     _isWelcoming = false;
     ttsHelper.stop();
@@ -158,7 +160,6 @@ class _SketchScreenState extends State<SketchScreen> {
                     tooltip: 'Sketch to Picture',
                   ),
                 ),
-
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/delete.png",
@@ -216,7 +217,8 @@ class _SketchScreenState extends State<SketchScreen> {
                 if (_isWelcoming) _stopWelcome();
                 setState(() {
                   RenderBox renderBox = context.findRenderObject() as RenderBox;
-                  double appBarHeight = 150; //AppBar().toolbarHeight!;
+                  double appBarHeight =
+                      150; // Update this if the AppBar height changes
                   double topPadding = MediaQuery.of(context).padding.top;
 
                   Offset adjustedPosition = details.globalPosition -
@@ -225,18 +227,24 @@ class _SketchScreenState extends State<SketchScreen> {
                       renderBox.globalToLocal(adjustedPosition);
 
                   if (!isErasing) {
-                    points.add(ColoredPoint(localPosition, selectedColor));
+                    points.add(ColoredPoint(
+                        localPosition, selectedColor, currentStrokeWidth));
                   } else {
+                    // Erasing could be refined to work with paths if necessary
                     points = points
                         .where((p) =>
                             p.point == null ||
-                            (p.point! - localPosition).distance > 20)
+                            (p.point! - localPosition).distance >
+                                20) // Adjust distance as needed
                         .toList();
                   }
                 });
               },
-              onPanEnd: (details) =>
-                  setState(() => points.add(ColoredPoint(null, selectedColor))),
+              onPanEnd: (details) {
+                // Add a null point to signal the end of a path
+                setState(() => points.add(
+                    ColoredPoint(null, selectedColor, currentStrokeWidth)));
+              },
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
@@ -254,30 +262,59 @@ class _SketchScreenState extends State<SketchScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(width: 16),
-        PopupMenuButton<Color>(
-          icon: Image.asset("assets/brush.png",
-              width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-
-          itemBuilder: (BuildContext context) {
-            return colorPalette.map((Color color) {
-              return PopupMenuItem<Color>(
-                value: color,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  color: color,
-                ),
-              );
-            }).toList();
-          },
-          onSelected: (Color color) {
-            selectedColor = color;
-            setState(() {
-              isErasing = false;
-              showSketch = true;
-            });
-          },
+        Flexible(
+          child: PopupMenuButton<Color>(
+            icon: Image.asset("assets/brush.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            itemBuilder: (BuildContext context) {
+              return colorPalette.map((Color color) {
+                return PopupMenuItem<Color>(
+                  value: color,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    color: color,
+                  ),
+                );
+              }).toList();
+            },
+            onSelected: (Color color) {
+              selectedColor = color;
+              setState(() {
+                isErasing = false;
+                showSketch = true;
+              });
+            },
+          ),
+        ),
+        Flexible(
+          child: PopupMenuButton<double>(
+            icon: Image.asset("assets/brush_size.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            itemBuilder: (BuildContext context) {
+              return [5.0, 10.0, 20.0, 40.0].map((double size) {
+                return PopupMenuItem<double>(
+                  value: size,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40, // This width is proportional to the brush size
+                        height: size, // Fixed height for the visual representation
+                        color: Colors.black, // Change the color if needed
+                      ),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            onSelected: (double size) {
+              setState(() {
+                currentStrokeWidth = size;
+                isErasing = false; // Ensure the eraser is not active
+              });
+            },
+          ),
         ),
         Flexible(
           child: IconButton(
@@ -308,7 +345,6 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Feedback',
           ),
         ),
-
       ],
     );
   }
@@ -519,4 +555,3 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 }
-
