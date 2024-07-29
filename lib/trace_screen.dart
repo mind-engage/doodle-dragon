@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/trace_image_picker.dart';
 import "../utils/user_messages.dart";
-import "../utils/sketch_painter.dart";
+import "../utils/sketch_painter_v2.dart";
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -52,6 +52,7 @@ class _TraceScreenState extends State<TraceScreen>
   OverlayEntry? _overlayEntry;
 
   Color selectedColor = Colors.black; // Default color
+  double currentStrokeWidth = 5.0;
   List<Color> colorPalette = [
     Colors.black,
     Colors.red,
@@ -137,8 +138,6 @@ class _TraceScreenState extends State<TraceScreen>
     });
     _welcomeMessage();
   }
-
-
 
   void _welcomeMessage() {
     _isWelcoming = true;
@@ -226,6 +225,18 @@ class _TraceScreenState extends State<TraceScreen>
                 ),
                 Flexible(
                   child: IconButton(
+                    icon: Image.asset("assets/analysis.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    onPressed: () {
+                      takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
+                    },
+                    tooltip: 'Feedback',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
                     icon: Image.asset("assets/library.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     color: Colors.white,
@@ -303,7 +314,8 @@ class _TraceScreenState extends State<TraceScreen>
                       renderBox.globalToLocal(adjustedPosition);
 
                   if (!isErasing) {
-                    points.add(ColoredPoint(localPosition, selectedColor));
+                    points.add(ColoredPoint(
+                        localPosition, selectedColor, currentStrokeWidth));
                   } else {
                     points = points
                         .where((p) =>
@@ -313,8 +325,8 @@ class _TraceScreenState extends State<TraceScreen>
                   }
                 });
               },
-              onPanEnd: (details) =>
-                  setState(() => points.add(ColoredPoint(null, selectedColor))),
+              onPanEnd: (details) => setState(() => points
+                  .add(ColoredPoint(null, selectedColor, currentStrokeWidth))),
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
@@ -358,6 +370,35 @@ class _TraceScreenState extends State<TraceScreen>
           ),
         ),
         Flexible(
+          child: PopupMenuButton<double>(
+            icon: Image.asset("assets/brush_size.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            itemBuilder: (BuildContext context) {
+              return [5.0, 10.0, 20.0, 40.0].map((double size) {
+                return PopupMenuItem<double>(
+                  value: size,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40, // This width is proportional to the brush size
+                        height: size, // Fixed height for the visual representation
+                        color: Colors.black, // Change the color if needed
+                      ),
+                    ],
+                  ),
+                );
+              }).toList();
+            },
+            onSelected: (double size) {
+              setState(() {
+                currentStrokeWidth = size;
+                isErasing = false; // Ensure the eraser is not active
+              });
+            },
+          ),
+        ),
+        Flexible(
           child: IconButton(
             icon: isErasing
                 ? Image.asset("assets/eraser.png",
@@ -372,18 +413,6 @@ class _TraceScreenState extends State<TraceScreen>
               });
             },
             tooltip: 'Erase',
-          ),
-        ),
-        Flexible(
-          child: IconButton(
-            icon: Image.asset("assets/analysis.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            color: Colors.white,
-            highlightColor: Colors.orange,
-            onPressed: () {
-              takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
-            },
-            tooltip: 'Feedback',
           ),
         ),
         Flexible(
@@ -471,11 +500,11 @@ class _TraceScreenState extends State<TraceScreen>
 
   void takeSnapshotAndAnalyze(
       BuildContext context, AiMode selectedMode, String userInput) async {
-    if(generatedImage == null) {
+    if (generatedImage == null) {
       ttsHelper.speak("Create or select a picture for tracing");
       return;
     }
-    if(points.isEmpty) {
+    if (points.isEmpty) {
       ttsHelper.speak("Trace the picture and try again");
       return;
     }
@@ -735,4 +764,3 @@ class _TraceScreenState extends State<TraceScreen>
     return picture.toImage(size.width.toInt(), size.height.toInt());
   }
 }
-
