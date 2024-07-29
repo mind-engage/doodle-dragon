@@ -63,6 +63,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   late Animation<double> _animation;
   Color selectedColor = Colors.black;
   double currentStrokeWidth = 5.0;
+  bool enablePictureZone = false;
 
   String getPrompt(AiMode mode) {
     switch (mode) {
@@ -293,43 +294,43 @@ class _ImagenScreenState extends State<ImagenScreen>
   }
 
   Widget buildBody() => Column(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                setState(() {
-                  RenderBox renderBox = context.findRenderObject() as RenderBox;
-                  double appBarHeight = 150; //AppBar().toolbarHeight!;
-                  double topPadding = MediaQuery.of(context).padding.top;
+    children: [
+      Expanded(
+        child: GestureDetector(
+          onPanUpdate: enablePictureZone ? (details) { // Only listen to pan updates when enablePictureZone is true
+            setState(() {
+              RenderBox renderBox = context.findRenderObject() as RenderBox;
+              double appBarHeight = 150;
+              double topPadding = MediaQuery.of(context).padding.top;
 
-                  Offset adjustedPosition = details.globalPosition -
-                      Offset(0, appBarHeight + topPadding);
-                  Offset localPosition =
-                      renderBox.globalToLocal(adjustedPosition);
+              Offset adjustedPosition = details.globalPosition -
+                  Offset(0, appBarHeight + topPadding);
+              Offset localPosition =
+              renderBox.globalToLocal(adjustedPosition);
 
-                  if (!isErasing) {
-                    points.add(ColoredPoint(localPosition, selectedColor, currentStrokeWidth));
-                  } else {
-                    points = points
-                        .where((p) =>
-                    p.point == null ||
-                        (p.point! - localPosition).distance > 20)
-                        .toList();
-                  }
-                });
-              },
-              onPanEnd: (details) => setState(() => points.add(ColoredPoint(null, selectedColor, currentStrokeWidth))),
-              child: RepaintBoundary(
-                key: repaintBoundaryKey,
-                child: CustomPaint(
-                  painter: SketchPainter(points, showSketch, generatedImage, 1.0),
-                  child: Container(),
-                ),
-              ),
+              if (!isErasing) {
+                points.add(ColoredPoint(localPosition, selectedColor, currentStrokeWidth));
+              } else {
+                points = points
+                    .where((p) =>
+                p.point == null ||
+                    (p.point! - localPosition).distance > 20)
+                    .toList();
+              }
+            });
+          } : null,
+          onPanEnd: enablePictureZone ? (details) => setState(() => points.add(ColoredPoint(null, selectedColor, currentStrokeWidth))) : null,
+          child: RepaintBoundary(
+            key: repaintBoundaryKey,
+            child: CustomPaint(
+              painter: SketchPainter(points, showSketch, generatedImage, 1.0),
+              child: Container(),
             ),
           ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 
   Widget controlPanelPortrait() {
     return Row(
