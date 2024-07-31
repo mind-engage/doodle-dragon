@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -39,13 +40,13 @@ class _TraceScreenState extends State<TraceScreen>
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  List<double> _transparencyLevels = [0.0, 0.5, 1.0];
+  final List<double> _transparencyLevels = [0.0, 0.5, 1.0];
   int _currentTransparencyLevel = 2;
 
   double iconWidth = 80;
   double iconHeight = 80;
 
-  stt.SpeechToText _speechToText = stt.SpeechToText();
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
   bool _isListening = false;
   bool _speechEnabled = false;
   String _sttText = "";
@@ -76,8 +77,6 @@ class _TraceScreenState extends State<TraceScreen>
       case AiMode.Analysis:
         return "The attached sketch is traced by a $learnerAge old child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
       case AiMode.PromptToImage:
-        // TODO: Interactive prompting
-        // return "You are an AI assistant collaborating with a $learnerAge-year-old child. Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model. The goal is to create a black and white outline image with basic shapes and minimal details. This outline should be easy for the child to trace. Use guiding questions to gather enough details to form simple shapes without color, ensuring the outline is engaging yet simple enough to enhance the child’s tracing skills.";
         return "You are an AI assistant collaborating with a $learnerAge year old child."
             "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
             "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
@@ -149,6 +148,10 @@ class _TraceScreenState extends State<TraceScreen>
     ttsHelper.stop();
   }
 
+  void _msgSelectPicture() {
+    ttsHelper.speak("Select a picture to trace");
+  }
+
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
@@ -157,8 +160,8 @@ class _TraceScreenState extends State<TraceScreen>
   void _initAnimation() {
     _animationController = AnimationController(
       vsync: this,
-      duration:
-          Duration(milliseconds: 500), // Duration of half cycle of oscillation
+      duration: const Duration(
+          milliseconds: 500), // Duration of half cycle of oscillation
     );
     _animation = Tween<double>(
             begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
@@ -188,7 +191,7 @@ class _TraceScreenState extends State<TraceScreen>
 
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           // Status bar color
           statusBarColor: Colors.deepPurple,
 
@@ -202,12 +205,22 @@ class _TraceScreenState extends State<TraceScreen>
         titleSpacing: 0,
         title: Column(
           children: <Widget>[
-            Text('Tracing',
+            const Text('Tracing',
                 style: TextStyle(
                     color: Colors.white)), // Adjust text style as needed
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/library.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    onPressed: _loadImageFromLibrary,
+                    tooltip: 'Load Image',
+                  ),
+                ),
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/imagen_square.png",
@@ -229,20 +242,13 @@ class _TraceScreenState extends State<TraceScreen>
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     color: Colors.white,
                     highlightColor: Colors.orange,
-                    onPressed: () {
-                      takeSnapshotAndAnalyze(context, AiMode.Analysis, "");
-                    },
+                    onPressed: generatedImage != null
+                        ? () {
+                            takeSnapshotAndAnalyze(
+                                context, AiMode.Analysis, "");
+                          }
+                        : _msgSelectPicture,
                     tooltip: 'Feedback',
-                  ),
-                ),
-                Flexible(
-                  child: IconButton(
-                    icon: Image.asset("assets/library.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    onPressed: _loadImageFromLibrary,
-                    tooltip: 'Load Image',
                   ),
                 ),
                 Flexible(
@@ -276,24 +282,22 @@ class _TraceScreenState extends State<TraceScreen>
               height: 180,
               child: controlPanelPortrait(),
             ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          return Transform.rotate(
-            angle: _animation.value,
-            child: FloatingActionButton(
-              onPressed: () {
-                _listen();
+      floatingActionButton: _isListening
+          ? AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _animation.value,
+                  child: FloatingActionButton(
+                    onPressed: _completeListening,
+                    backgroundColor: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: Image.asset('assets/doodle_mic_on.png'),
+                  ),
+                );
               },
-              backgroundColor: Colors.transparent,
-              shape: CircleBorder(),
-              child: Image.asset(_isListening
-                  ? 'assets/doodle_mic_on.png'
-                  : 'assets/doodle_mic_off.png'),
-            ),
-          );
-        },
-      ),
+            )
+          : null,
     );
   }
 
@@ -303,30 +307,37 @@ class _TraceScreenState extends State<TraceScreen>
             child: GestureDetector(
               onPanUpdate: (details) {
                 if (_isWelcoming) _stopWelcome();
-                setState(() {
-                  RenderBox renderBox = context.findRenderObject() as RenderBox;
-                  double appBarHeight = 150; //AppBar().toolbarHeight!;
-                  double topPadding = MediaQuery.of(context).padding.top;
+                if (generatedImage != null) {
+                  setState(() {
+                    RenderBox renderBox =
+                        context.findRenderObject() as RenderBox;
+                    double appBarHeight = 150; //AppBar().toolbarHeight!;
+                    double topPadding = MediaQuery.of(context).padding.top;
 
-                  Offset adjustedPosition = details.globalPosition -
-                      Offset(0, appBarHeight + topPadding);
-                  Offset localPosition =
-                      renderBox.globalToLocal(adjustedPosition);
+                    Offset adjustedPosition = details.globalPosition -
+                        Offset(0, appBarHeight + topPadding);
+                    Offset localPosition =
+                        renderBox.globalToLocal(adjustedPosition);
 
-                  if (!isErasing) {
-                    points.add(ColoredPoint(
-                        localPosition, selectedColor, currentStrokeWidth));
-                  } else {
-                    points = points
-                        .where((p) =>
-                            p.point == null ||
-                            (p.point! - localPosition).distance > 20)
-                        .toList();
-                  }
-                });
+                    if (!isErasing) {
+                      points.add(ColoredPoint(
+                          localPosition, selectedColor, currentStrokeWidth));
+                    } else {
+                      points = points
+                          .where((p) =>
+                              p.point == null ||
+                              (p.point! - localPosition).distance > 20)
+                          .toList();
+                    }
+                  });
+                }
               },
-              onPanEnd: (details) => setState(() => points
-                  .add(ColoredPoint(null, selectedColor, currentStrokeWidth))),
+              onPanEnd: (details) {
+                if (generatedImage != null) {
+                  setState(() => points.add(
+                      ColoredPoint(null, selectedColor, currentStrokeWidth)));
+                }
+              },
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
@@ -367,6 +378,7 @@ class _TraceScreenState extends State<TraceScreen>
                 showSketch = true;
               });
             },
+            enabled: generatedImage != null,
           ),
         ),
         Flexible(
@@ -381,8 +393,10 @@ class _TraceScreenState extends State<TraceScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 40, // This width is proportional to the brush size
-                        height: size, // Fixed height for the visual representation
+                        width:
+                            40, // This width is proportional to the brush size
+                        height:
+                            size, // Fixed height for the visual representation
                         color: Colors.black, // Change the color if needed
                       ),
                     ],
@@ -396,6 +410,7 @@ class _TraceScreenState extends State<TraceScreen>
                 isErasing = false; // Ensure the eraser is not active
               });
             },
+            enabled: generatedImage != null,
           ),
         ),
         Flexible(
@@ -407,11 +422,13 @@ class _TraceScreenState extends State<TraceScreen>
                     width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: () {
-              setState(() {
-                isErasing = true;
-              });
-            },
+            onPressed: generatedImage != null
+                ? () {
+                    setState(() {
+                      isErasing = true;
+                    });
+                  }
+                : _msgSelectPicture,
             tooltip: 'Erase',
           ),
         ),
@@ -423,12 +440,15 @@ class _TraceScreenState extends State<TraceScreen>
                 fit: BoxFit.fill), // Example icon - you can customize
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: () {
-              setState(() {
-                _currentTransparencyLevel = (_currentTransparencyLevel + 1) %
-                    _transparencyLevels.length;
-              });
-            },
+            onPressed: generatedImage != null
+                ? () {
+                    setState(() {
+                      _currentTransparencyLevel =
+                          (_currentTransparencyLevel + 1) %
+                              _transparencyLevels.length;
+                    });
+                  }
+                : _msgSelectPicture,
             tooltip: 'Transparency',
           ),
         ),
@@ -461,6 +481,9 @@ class _TraceScreenState extends State<TraceScreen>
   }
 
   Future<void> _loadImageFromLibrary() async {
+    if (_isWelcoming) _stopWelcome();
+    if (_isListening) _abortListening();
+
     Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => TraceImagePicker(
             onSelect: (String imageUrl) async {
@@ -494,7 +517,9 @@ class _TraceScreenState extends State<TraceScreen>
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-      print('Error sharing canvas: $e');
+      if (kDebugMode) {
+        print('Error sharing canvas: $e');
+      }
     }
   }
 
@@ -517,8 +542,8 @@ class _TraceScreenState extends State<TraceScreen>
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) => const Center(
+          child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -527,12 +552,7 @@ class _TraceScreenState extends State<TraceScreen>
       Size size = boundary.size;
       double width = size.width;
       double height = size.height;
-      /*
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-      */
+
       ui.Image image = await drawPointsToImage(points, size);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
@@ -578,22 +598,29 @@ class _TraceScreenState extends State<TraceScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           if (selectedMode == AiMode.Analysis) {
             ttsHelper.speak(responseText);
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() =>
-          isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+      setState(() => isLoading = false);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -607,8 +634,8 @@ class _TraceScreenState extends State<TraceScreen>
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) => const Center(
+          child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       String promptText = getPrompt(selectedMode, userInput);
@@ -634,7 +661,9 @@ class _TraceScreenState extends State<TraceScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
@@ -652,27 +681,39 @@ class _TraceScreenState extends State<TraceScreen>
                 decodeAndSetImage(bytesImage!);
               });
             } else {
-              print('No image returned from the API');
+              if (kDebugMode) {
+                print('No image returned from the API');
+              }
             }
           } catch (e) {
-            print('Error calling OpenAI image generation API: $e');
+            if (kDebugMode) {
+              print('Error calling OpenAI image generation API: $e');
+            }
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() =>
-          isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+      setState(() => isLoading = false);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
   void _listen() async {
+    if (_isWelcoming) _stopWelcome();
+    if (_isListening) await _abortListening();
+
     if (!_isListening) {
       await ttsHelper.speak("Can you tell me what you'd like to draw?");
       _animateMic(true);
@@ -685,18 +726,17 @@ class _TraceScreenState extends State<TraceScreen>
             });
             _overlayEntry?.markNeedsBuild(); // Rebuild overlay with new text
           },
-          listenFor: Duration(seconds: 30),
-          pauseFor: Duration(seconds: 5),
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 5),
         );
-        _showOverlay(context);
+        if (mounted) {
+          _showOverlay(context);
+        }
       }
-    } else {
-      _animateMic(false);
-      _completeListening();
     }
   }
 
-  void _completeListening() {
+  void _completeListening() async {
     if (_isListening) {
       setState(() => _isListening = false);
       _speechToText.stop();
@@ -710,6 +750,14 @@ class _TraceScreenState extends State<TraceScreen>
     }
   }
 
+  Future<void> _abortListening() async {
+    if (_isListening) {
+      setState(() => _isListening = false);
+      _speechToText.stop();
+      _removeOverlay();
+    }
+  }
+
   void _showOverlay(BuildContext context) {
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -718,14 +766,14 @@ class _TraceScreenState extends State<TraceScreen>
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _sttText,
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ),

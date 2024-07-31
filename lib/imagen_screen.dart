@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
@@ -44,7 +42,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   double iconWidth = 80;
   double iconHeight = 80;
 
-  stt.SpeechToText _speechToText = stt.SpeechToText();
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
   bool _isListening = false;
   bool _speechEnabled = false;
   String _sttText = "";
@@ -150,6 +148,10 @@ class _ImagenScreenState extends State<ImagenScreen>
     ttsHelper.stop();
   }
 
+  void _msgSGeneratePicture() {
+    ttsHelper.speak("First generate a picture");
+  }
+
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
@@ -158,8 +160,8 @@ class _ImagenScreenState extends State<ImagenScreen>
   void _initAnimation() {
     _animationController = AnimationController(
       vsync: this,
-      duration:
-          Duration(milliseconds: 500), // Duration of half cycle of oscillation
+      duration: const Duration(
+          milliseconds: 500), // Duration of half cycle of oscillation
     );
     _animation = Tween<double>(
             begin: -0.523599, end: 0.523599) // +/- 30 degrees in radians
@@ -189,7 +191,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.deepPurple,
           statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
           statusBarBrightness: Brightness.light, // For iOS (dark icons)
@@ -200,7 +202,7 @@ class _ImagenScreenState extends State<ImagenScreen>
         toolbarHeight: 150,
         title: Column(
           children: <Widget>[
-            Text('Imagening',
+            const Text('Imagening',
                 style: TextStyle(
                     color: Colors.white)), // Adjust text style as needed
             Row(
@@ -221,16 +223,7 @@ class _ImagenScreenState extends State<ImagenScreen>
                     tooltip: 'Prompt to Image',
                   ),
                 ),
-                Flexible(
-                  child: IconButton(
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    icon: Image.asset("assets/save.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: _saveGeneratedImage,
-                    tooltip: 'Save Image',
-                  ),
-                ),
+
                 Flexible(
                   child: IconButton(
                     color: Colors.white,
@@ -245,9 +238,19 @@ class _ImagenScreenState extends State<ImagenScreen>
                   child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
+                    icon: Image.asset("assets/save.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: generatedImage != null ? _saveGeneratedImage : _msgSGeneratePicture,
+                    tooltip: 'Save Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
                     icon: Image.asset("assets/share.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: shareCanvas,
+                    onPressed: generatedImage != null ? shareCanvas : _msgSGeneratePicture,
                     tooltip: 'Share Image',
                   ),
                 ),
@@ -272,65 +275,72 @@ class _ImagenScreenState extends State<ImagenScreen>
               height: 180,
               child: controlPanelPortrait(),
             ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          return Transform.rotate(
-            angle: _animation.value,
-            child: FloatingActionButton(
-              onPressed: () {
-                _listen();
+      floatingActionButton: _isListening
+          ? AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _animation.value,
+                  child: FloatingActionButton(
+                    onPressed: _completeListening,
+                    backgroundColor: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: Image.asset('assets/doodle_mic_on.png'),
+                  ),
+                );
               },
-              backgroundColor: Colors.transparent,
-              shape: CircleBorder(),
-              child: Image.asset(_isListening
-                  ? 'assets/doodle_mic_on.png'
-                  : 'assets/doodle_mic_off.png'),
-            ),
-          );
-        },
-      ),
+            )
+          : null,
     );
   }
 
   Widget buildBody() => Column(
-    children: [
-      Expanded(
-        child: GestureDetector(
-          onPanUpdate: enablePictureZone ? (details) { // Only listen to pan updates when enablePictureZone is true
-            setState(() {
-              RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight = 150;
-              double topPadding = MediaQuery.of(context).padding.top;
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: enablePictureZone
+                  ? (details) {
+                      // Only listen to pan updates when enablePictureZone is true
+                      setState(() {
+                        RenderBox renderBox =
+                            context.findRenderObject() as RenderBox;
+                        double appBarHeight = 150;
+                        double topPadding = MediaQuery.of(context).padding.top;
 
-              Offset adjustedPosition = details.globalPosition -
-                  Offset(0, appBarHeight + topPadding);
-              Offset localPosition =
-              renderBox.globalToLocal(adjustedPosition);
+                        Offset adjustedPosition = details.globalPosition -
+                            Offset(0, appBarHeight + topPadding);
+                        Offset localPosition =
+                            renderBox.globalToLocal(adjustedPosition);
 
-              if (!isErasing) {
-                points.add(ColoredPoint(localPosition, selectedColor, currentStrokeWidth));
-              } else {
-                points = points
-                    .where((p) =>
-                p.point == null ||
-                    (p.point! - localPosition).distance > 20)
-                    .toList();
-              }
-            });
-          } : null,
-          onPanEnd: enablePictureZone ? (details) => setState(() => points.add(ColoredPoint(null, selectedColor, currentStrokeWidth))) : null,
-          child: RepaintBoundary(
-            key: repaintBoundaryKey,
-            child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage, 1.0),
-              child: Container(),
+                        if (!isErasing) {
+                          points.add(ColoredPoint(localPosition, selectedColor,
+                              currentStrokeWidth));
+                        } else {
+                          points = points
+                              .where((p) =>
+                                  p.point == null ||
+                                  (p.point! - localPosition).distance > 20)
+                              .toList();
+                        }
+                      });
+                    }
+                  : null,
+              onPanEnd: enablePictureZone
+                  ? (details) => setState(() => points.add(
+                      ColoredPoint(null, selectedColor, currentStrokeWidth)))
+                  : null,
+              child: RepaintBoundary(
+                key: repaintBoundaryKey,
+                child: CustomPaint(
+                  painter:
+                      SketchPainter(points, showSketch, generatedImage, 1.0),
+                  child: Container(),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 
   Widget controlPanelPortrait() {
     return Row(
@@ -342,9 +352,9 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: () {
+            onPressed: generatedImage != null ? () {
               takeSnapshotAndAnalyze(context, AiMode.Story);
-            },
+            } : _msgSGeneratePicture,
             tooltip: 'Tell Story',
           ),
         ),
@@ -354,9 +364,9 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: () {
+            onPressed: generatedImage != null ? () {
               takeSnapshotAndAnalyze(context, AiMode.Poetry);
-            },
+            } : _msgSGeneratePicture,
             tooltip: 'Tell a Poem',
           ),
         ),
@@ -366,12 +376,12 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: () {
+            onPressed: generatedImage != null ? () {
               setState(() {
                 _aiMode = AiMode.Explore;
               });
               _listen();
-            },
+            } : _msgSGeneratePicture,
             tooltip: 'Explore',
           ),
         ),
@@ -425,7 +435,9 @@ class _ImagenScreenState extends State<ImagenScreen>
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-      print('Error sharing canvas: $e');
+      if (kDebugMode) {
+        print('Error sharing canvas: $e');
+      }
     }
   }
 
@@ -438,8 +450,8 @@ class _ImagenScreenState extends State<ImagenScreen>
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) => const Center(
+          child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -483,7 +495,9 @@ class _ImagenScreenState extends State<ImagenScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           if (selectedMode == AiMode.Story) {
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Poetry) {
@@ -508,26 +522,36 @@ class _ImagenScreenState extends State<ImagenScreen>
                 });
                 ttsHelper.speak(responseText);
               } else {
-                print('No image returned from the API');
+                if (kDebugMode) {
+                  print('No image returned from the API');
+                }
                 ttsHelper.speak("Failed to generate image. Try again");
               }
             } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
+              if (kDebugMode) {
+                print('Error calling OpenAI image generation API: $e');
+              }
               ttsHelper.speak("Failed to generate image. Try again");
             }
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
           isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -540,8 +564,8 @@ class _ImagenScreenState extends State<ImagenScreen>
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) => const Center(
+          child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       String promptText = getPrompt(selectedMode);
@@ -567,7 +591,9 @@ class _ImagenScreenState extends State<ImagenScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
@@ -585,30 +611,39 @@ class _ImagenScreenState extends State<ImagenScreen>
                 decodeAndSetImage(bytesImage!);
               });
             } else {
-              print('No image returned from the API');
+              if (kDebugMode) {
+                print('No image returned from the API');
+              }
             }
           } catch (e) {
-            print('Error calling OpenAI image generation API: $e');
+            if (kDebugMode) {
+              print('Error calling OpenAI image generation API: $e');
+            }
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() =>
-          isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+      setState(() => isLoading = false);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
   void _saveGeneratedImage() async {
     if (generatedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No image to save')),
+        const SnackBar(content: Text('No image to save')),
       );
       return;
     }
@@ -625,14 +660,20 @@ class _ImagenScreenState extends State<ImagenScreen>
       await imgFile.writeAsBytes(pngBytes);
 
       // Optionally, show a message that the file has been saved.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Image saved to $filename')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image saved to $filename')),
+        );
+      }
     } catch (e) {
-      print('Error saving generated image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save image')),
-      );
+      if (kDebugMode) {
+        print('Error saving generated image: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save image')),
+        );
+      }
     }
   }
 
@@ -649,6 +690,8 @@ class _ImagenScreenState extends State<ImagenScreen>
   }
 
   void _listen() async {
+    if (_isWelcoming) _stopWelcome();
+
     if (!_isListening) {
       await ttsHelper.speak(getMessageForVoicePrompting(_aiMode));
       _animateMic(true);
@@ -661,10 +704,12 @@ class _ImagenScreenState extends State<ImagenScreen>
             });
             _overlayEntry?.markNeedsBuild(); // Rebuild overlay with new text
           },
-          listenFor: Duration(seconds: 30),
-          pauseFor: Duration(seconds: 5),
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 5),
         );
-        _showOverlay(context);
+        if (mounted) {
+          _showOverlay(context);
+        }
       }
     } else {
       _animateMic(false);
@@ -705,14 +750,14 @@ class _ImagenScreenState extends State<ImagenScreen>
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _sttText,
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ),

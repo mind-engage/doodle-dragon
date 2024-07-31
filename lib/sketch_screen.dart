@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_openai/dart_openai.dart';
 import 'package:share_plus/share_plus.dart';
@@ -39,8 +37,8 @@ class _SketchScreenState extends State<SketchScreen> {
   final double canvasWidth = 1024;
   final double canvasHeight = 1920;
   ui.Image? generatedImage;
-  List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
-  int _currentTransparencyLevel = 3;
+  final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
+  final int _currentTransparencyLevel = 3;
 
   double iconWidth = 80;
   double iconHeight = 80;
@@ -59,6 +57,7 @@ class _SketchScreenState extends State<SketchScreen> {
   String learnerName = "John";
   int learnerAge = 3;
   bool _isWelcoming = false;
+  bool _isAnalysing = false;
 
   TtsHelper ttsHelper = TtsHelper();
 
@@ -122,6 +121,18 @@ class _SketchScreenState extends State<SketchScreen> {
     ttsHelper.stop();
   }
 
+  void _analysisMessage(String message) {
+    _isAnalysing = true;
+    ttsHelper.speak(message);
+  }
+  void _stopAnalysis() {
+    _isAnalysing = false;
+    ttsHelper.stop();
+  }
+  void _stopTts() {
+    if(_isAnalysing) _stopAnalysis;
+    if(_isWelcoming) _stopWelcome();
+  }
   @override
   Widget build(BuildContext context) {
     bool isLandscape =
@@ -129,10 +140,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle(
-          // Status bar color
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.deepPurple,
-          // Status bar brightness (optional)
           statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
           statusBarBrightness: Brightness.light, // For iOS (dark icons)
         ),
@@ -142,7 +151,7 @@ class _SketchScreenState extends State<SketchScreen> {
         titleSpacing: 0,
         title: Column(
           children: <Widget>[
-            Text('Sketching',
+            const Text('Sketching',
                 style: TextStyle(
                     color: Colors.white)), // Adjust text style as needed
             Row(
@@ -215,6 +224,7 @@ class _SketchScreenState extends State<SketchScreen> {
             child: GestureDetector(
               onPanUpdate: (details) {
                 if (_isWelcoming) _stopWelcome();
+                if (_isAnalysing) _stopAnalysis();
                 setState(() {
                   RenderBox renderBox = context.findRenderObject() as RenderBox;
                   double appBarHeight =
@@ -299,8 +309,10 @@ class _SketchScreenState extends State<SketchScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 40, // This width is proportional to the brush size
-                        height: size, // Fixed height for the visual representation
+                        width:
+                            40, // This width is proportional to the brush size
+                        height:
+                            size, // Fixed height for the visual representation
                         color: Colors.black, // Change the color if needed
                       ),
                     ],
@@ -380,7 +392,9 @@ class _SketchScreenState extends State<SketchScreen> {
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-      print('Error sharing canvas: $e');
+      if (kDebugMode) {
+        print('Error sharing canvas: $e');
+      }
     }
   }
 
@@ -394,7 +408,7 @@ class _SketchScreenState extends State<SketchScreen> {
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+          const Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -438,9 +452,11 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           if (selectedMode == AiMode.Analysis) {
-            ttsHelper.speak(responseText);
+            _analysisMessage(responseText);
           } else if (selectedMode == AiMode.SketchToImage) {
             // Generate an image from a text prompt
             try {
@@ -460,24 +476,34 @@ class _SketchScreenState extends State<SketchScreen> {
                   showSketch = false;
                 });
               } else {
-                print('No image returned from the API');
+                if (kDebugMode) {
+                  print('No image returned from the API');
+                }
               }
             } catch (e) {
-              print('Error calling OpenAI image generation API: $e');
+              if (kDebugMode) {
+                print('Error calling OpenAI image generation API: $e');
+              }
             }
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
-          isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+          isLoading = false);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -491,7 +517,7 @@ class _SketchScreenState extends State<SketchScreen> {
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (context) =>
-          Center(child: CircularProgressIndicator()), // Show a loading spinner
+          const Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       String promptText = getPrompt(selectedMode);
@@ -517,7 +543,9 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          print("Response from model: $responseText");
+          if (kDebugMode) {
+            print("Response from model: $responseText");
+          }
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
@@ -532,26 +560,36 @@ class _SketchScreenState extends State<SketchScreen> {
               setState(() {
                 Uint8List bytesImage = base64Decode(imageResponse.data.first
                     .b64Json!); // Assuming URL points to a base64 image string
-                decodeAndSetImage(bytesImage!);
+                decodeAndSetImage(bytesImage);
               });
             } else {
-              print('No image returned from the API');
+              if (kDebugMode) {
+                print('No image returned from the API');
+              }
             }
           } catch (e) {
-            print('Error calling OpenAI image generation API: $e');
+            if (kDebugMode) {
+              print('Error calling OpenAI image generation API: $e');
+            }
           }
         } else {
-          print("Content is not safe for children.");
+          if (kDebugMode) {
+            print("Content is not safe for children.");
+          }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        print("Failed to get response: ${response.body}");
+        if (kDebugMode) {
+          print("Failed to get response: ${response.body}");
+        }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
       setState(() =>
-          isLoading = false); // Reset loading state after operation completes
-      Navigator.of(context).pop();
+          isLoading = false);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 }

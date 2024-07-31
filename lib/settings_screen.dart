@@ -10,7 +10,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late SharedPreferences prefs;
   String learnerName = "";
-  int learnerAge = 3;  // Default to the minimum age
+  int learnerAge = 3; // Default to the minimum age
   String skillsText = "";
   bool _isLoading = true;
 
@@ -83,7 +83,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -110,7 +109,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           ListTile(
-            title: Text('Learner Name',  style: TextStyle(color: Color(0xFF330066))),
+            title: Text('Learner Name',
+                style: TextStyle(color: Color(0xFF330066))),
             subtitle: TextField(
               decoration: InputDecoration(
                 hintText: "Enter learner's name",
@@ -140,11 +140,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ListTile(
-            title: Text('Cognitive and Learning Skills for Age $learnerAge',
+            title: Text(
+              'Cognitive and Learning Skills for Age $learnerAge',
               style: TextStyle(
-                fontSize: 20,  // Increased font size
-                fontWeight: FontWeight.bold,  // Bold text for emphasis
-                color: Colors.deepPurple,  // Color that stands out, match this with your app's theme if necessary
+                fontSize: 20, // Increased font size
+                fontWeight: FontWeight.bold, // Bold text for emphasis
+                color: Colors
+                    .deepPurple, // Color that stands out, match this with your app's theme if necessary
               ),
             ),
             subtitle: MarkdownBody(

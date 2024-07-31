@@ -36,7 +36,8 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -105,17 +106,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SketchScreen(
-                        geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                        openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
-                    )),
+                    MaterialPageRoute(
+                        builder: (context) => SketchScreen(
+                            geminiApiKey:
+                                dotenv.get('GEMINI_API_KEY', fallback: ''),
+                            openaiApiKey:
+                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
                   );
                 },
                 child: Row(
-                  mainAxisSize: MainAxisSize.min, // Aligns children closely together
+                  mainAxisSize:
+                      MainAxisSize.min, // Aligns children closely together
                   children: <Widget>[
                     Image.asset('assets/pencil_icon.png', height: 60),
-                    SizedBox(width: 10), // Spacing between the image and the text
+                    SizedBox(
+                        width: 10), // Spacing between the image and the text
                     Text('Start Sketching!'),
                   ],
                 ),
@@ -129,10 +134,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => TraceScreen(
-                        geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                        openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
-                    )),
+                    MaterialPageRoute(
+                        builder: (context) => TraceScreen(
+                            geminiApiKey:
+                                dotenv.get('GEMINI_API_KEY', fallback: ''),
+                            openaiApiKey:
+                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
                   );
                 },
                 child: Row(
@@ -153,10 +160,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ImagenScreen(
-                        geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                        openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: '')
-                    )),
+                    MaterialPageRoute(
+                        builder: (context) => ImagenScreen(
+                            geminiApiKey:
+                                dotenv.get('GEMINI_API_KEY', fallback: ''),
+                            openaiApiKey:
+                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
                   );
                 },
                 child: Row(
