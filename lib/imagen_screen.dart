@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import "../utils/user_messages.dart";
 import "../utils/sketch_painter_v2.dart";
+import "../utils/camera_capture.dart";
 
 enum AiMode { Story, Explore, Poetry, PromptToImage }
 
@@ -184,6 +185,17 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  void _openCamera() async {
+    final image = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CameraCapture()),
+    );
+    if (image != null) {
+      final Uint8List imageData = await image.readAsBytes();
+      decodeAndSetImage(imageData);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isLandscape =
@@ -223,7 +235,13 @@ class _ImagenScreenState extends State<ImagenScreen>
                     tooltip: 'Prompt to Image',
                   ),
                 ),
-
+                Flexible(
+                  child: IconButton(
+                    icon: Icon(Icons.camera),
+                    onPressed: _openCamera,
+                    tooltip: 'Capture Image',
+                  ),
+                ),
                 Flexible(
                   child: IconButton(
                     color: Colors.white,
@@ -240,7 +258,9 @@ class _ImagenScreenState extends State<ImagenScreen>
                     highlightColor: Colors.orange,
                     icon: Image.asset("assets/save.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: generatedImage != null ? _saveGeneratedImage : _msgSGeneratePicture,
+                    onPressed: generatedImage != null
+                        ? _saveGeneratedImage
+                        : _msgSGeneratePicture,
                     tooltip: 'Save Image',
                   ),
                 ),
@@ -250,7 +270,9 @@ class _ImagenScreenState extends State<ImagenScreen>
                     highlightColor: Colors.orange,
                     icon: Image.asset("assets/share.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: generatedImage != null ? shareCanvas : _msgSGeneratePicture,
+                    onPressed: generatedImage != null
+                        ? shareCanvas
+                        : _msgSGeneratePicture,
                     tooltip: 'Share Image',
                   ),
                 ),
@@ -352,9 +374,11 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: generatedImage != null ? () {
-              takeSnapshotAndAnalyze(context, AiMode.Story);
-            } : _msgSGeneratePicture,
+            onPressed: generatedImage != null
+                ? () {
+                    takeSnapshotAndAnalyze(context, AiMode.Story);
+                  }
+                : _msgSGeneratePicture,
             tooltip: 'Tell Story',
           ),
         ),
@@ -364,9 +388,11 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: generatedImage != null ? () {
-              takeSnapshotAndAnalyze(context, AiMode.Poetry);
-            } : _msgSGeneratePicture,
+            onPressed: generatedImage != null
+                ? () {
+                    takeSnapshotAndAnalyze(context, AiMode.Poetry);
+                  }
+                : _msgSGeneratePicture,
             tooltip: 'Tell a Poem',
           ),
         ),
@@ -376,12 +402,14 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
-            onPressed: generatedImage != null ? () {
-              setState(() {
-                _aiMode = AiMode.Explore;
-              });
-              _listen();
-            } : _msgSGeneratePicture,
+            onPressed: generatedImage != null
+                ? () {
+                    setState(() {
+                      _aiMode = AiMode.Explore;
+                    });
+                    _listen();
+                  }
+                : _msgSGeneratePicture,
             tooltip: 'Explore',
           ),
         ),
