@@ -18,7 +18,7 @@ import "../utils/user_messages.dart";
 import "../utils/sketch_painter_v2.dart";
 import "../utils/camera_capture.dart";
 
-enum AiMode { Story, Explore, Poetry, PromptToImage }
+enum AiMode { Story, Transform, Poetry, PromptToImage }
 
 class ImagenScreen extends StatefulWidget {
   final String geminiApiKey;
@@ -64,33 +64,42 @@ class _ImagenScreenState extends State<ImagenScreen>
   double currentStrokeWidth = 5.0;
   bool enablePictureZone = false;
 
-  String getPrompt(AiMode mode) {
+  String getVlmPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
-        return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a story. Your output is used by the application to play to child using text to speech";
+        return "Tell me a short, engaging story, suitable for a $learnerAge year old, based on the image. I want the story to be fun and maybe a little silly!";
       case AiMode.Poetry:
-        return "The attached image is generate by a $learnerAge year child using text to image. Analyze the image and tell a poem.";
-      case AiMode.Explore:
-        return "The attached image is generate by a $learnerAge year child using text to image."
-            "The child wants to explore more about the contents in this image. and has an enquiry."
-            "child's enquiry: $_sttText"
-            "Generate a reply to the child in the context of supplied image. The answer should help child's exploration curiosity. Your answer also will be used to generate an image";
+        return "Take a look at this wonderful image  $learnerAge year old wants to learn about! Let's write a poem together, just like they might write it, about what we see in the picture. " ""
+            "Use fun words and rhymes that a $learnerAge year old would love!";
+      case AiMode.Transform:
+        return "You are a storyteller and an artist. "
+        "Based on this image and the idea  $_sttText, tell me a short, engaging story suitable for a $learnerAge year old. I want the story to be fun and maybe a little silly!";
+
       case AiMode.PromptToImage:
-        return "You are an AI agent helping a 3 year old child to generate a creative and detailed prompt to be passed to text to image generation model."
-            "Elaborate the child's requirement $_sttText and  generate the prompt to create the image";
+        return "You are an AI agent helping a $learnerAge year old child to generate a creative and detailed prompt to be passed to text to image generation model."
+            "Elaborate on the following topic given by tge child: $_sttText. Generate a detailed prompt to create the image";
       default:
-        return ""; // Handle any other cases or throw an error if needed
+        return "";
     }
   }
 
+  String getImageGenPrompt(AiMode mode, String vlmResponse) {
+    switch (mode) {
+      case AiMode.Transform:
+        return "Generate a kid friendly drawing for $learnerAge old child, for the following story line: $vlmResponse. "
+            "Make the drawing in the style of a children's book illustration, with bright colors";
+        default:
+          return "";
+    }
+  }
   String getWaitMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
         return "I am creating a story for you. Please wait";
       case AiMode.Poetry:
         return "I am making a poem for you. Please wait";
-      case AiMode.Explore:
-        return "I am finding answer";
+      case AiMode.Transform:
+        return "I am transforming the image. Please wait";
       case AiMode.PromptToImage:
         return "Generating the picture. Please wait";
       default:
@@ -100,7 +109,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
   String getMessageForVoicePrompting(AiMode mode) {
     switch (mode) {
-      case AiMode.Explore:
+      case AiMode.Transform:
         return "Tell me what to explore";
       case AiMode.PromptToImage:
         return "Can you tell me what you'd like to draw?";
@@ -237,7 +246,8 @@ class _ImagenScreenState extends State<ImagenScreen>
                 ),
                 Flexible(
                   child: IconButton(
-                    icon: Icon(Icons.camera),
+                    icon: Image.asset("assets/camera.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _openCamera,
                     tooltip: 'Capture Image',
                   ),
@@ -405,7 +415,7 @@ class _ImagenScreenState extends State<ImagenScreen>
             onPressed: generatedImage != null
                 ? () {
                     setState(() {
-                      _aiMode = AiMode.Explore;
+                      _aiMode = AiMode.Transform;
                     });
                     _listen();
                   }
@@ -497,7 +507,10 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       String base64String = base64Encode(pngBytes);
 
-      String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
+      String promptText = getVlmPrompt(selectedMode); //prompts[selectedMode]!;
+      if (kDebugMode) {
+        print("Prompt to Gemini: $promptText");
+      }
       String jsonBody = jsonEncode({
         "contents": [
           {
@@ -524,19 +537,19 @@ class _ImagenScreenState extends State<ImagenScreen>
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           if (kDebugMode) {
-            print("Response from model: $responseText");
+            print("Response from Gemini: $responseText");
           }
           if (selectedMode == AiMode.Story) {
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Poetry) {
             ttsHelper.speak(responseText);
-          } else if (selectedMode == AiMode.Explore) {
+          } else if (selectedMode == AiMode.Transform) {
             //ttsHelper.speak(responseText);
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(
                 model: 'dall-e-3',
-                prompt: responseText,
+                prompt:getImageGenPrompt(selectedMode, responseText),
                 n: 1,
                 size: OpenAIImageSize.size1024,
                 responseFormat: OpenAIImageResponseFormat.b64Json,
@@ -596,7 +609,7 @@ class _ImagenScreenState extends State<ImagenScreen>
           child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
-      String promptText = getPrompt(selectedMode);
+      String promptText = getVlmPrompt(selectedMode);
       String jsonBody = jsonEncode({
         "contents": [
           {
@@ -753,7 +766,7 @@ class _ImagenScreenState extends State<ImagenScreen>
       if (_sttText.isNotEmpty) {
         if (_aiMode == AiMode.PromptToImage) {
           generatePicture(context, AiMode.PromptToImage);
-        } else if (_aiMode == AiMode.Explore) {
+        } else if (_aiMode == AiMode.Transform) {
           takeSnapshotAndAnalyze(context, _aiMode);
         }
       }
