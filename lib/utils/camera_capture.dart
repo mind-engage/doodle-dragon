@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'log.dart';
 
 class CameraCapture extends StatefulWidget {
   const CameraCapture({Key? key}) : super(key: key);
@@ -24,9 +25,7 @@ class _CameraCaptureState extends State<CameraCapture> {
   void _initCamera(int cameraIndex) async {
     cameras = await availableCameras();
     if (cameras.isEmpty) {
-      if (kDebugMode) {
-        print('No cameras are available');
-      }
+      Log.d('No cameras are available');
       return;
     }
     if (cameraIndex >= cameras.length) {
@@ -54,9 +53,7 @@ class _CameraCaptureState extends State<CameraCapture> {
       final image = await _cameraController!.takePicture();
       Navigator.pop(context, image); // Pass the image back to the previous screen
     } catch (e) {
-      if (kDebugMode) {
-        print('Error taking picture: $e');
-      }
+      Log.d('Error taking picture: $e');
     }
   }
 

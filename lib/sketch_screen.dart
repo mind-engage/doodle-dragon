@@ -15,6 +15,8 @@ import '../utils/tts_helper.dart';
 import '../utils/user_messages.dart';
 import '../utils/sketch_painter_v2.dart';
 import '../utils/log.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum AiMode { Analysis, SketchToImage }
 
@@ -187,6 +189,16 @@ class _SketchScreenState extends State<SketchScreen> {
                 ),
                 Flexible(
                   child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    icon: Image.asset("assets/save.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: _saveCanvas,
+                    tooltip: 'Save Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
                     icon: Image.asset("assets/share.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: shareCanvas,
@@ -346,6 +358,7 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Erase',
           ),
         ),
+
         Flexible(
           child: IconButton(
             icon: Image.asset("assets/analysis.png",
@@ -395,6 +408,82 @@ class _SketchScreenState extends State<SketchScreen> {
     } catch (e) {
         Log.d('Error sharing canvas: $e');
     }
+  }
+
+  Future<void> requestPermissions() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
+    }
+  }
+
+  Future<bool> saveImage() async {
+    try {
+
+      RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+
+      ByteData? byteData =
+      await image!.toByteData(format: ui.ImageByteFormat.png);
+      Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final result = await ImageGallerySaver.saveImage(pngBytes,
+          quality: 60, name: "hello");
+      Log.d(result);
+      return true;
+    } catch (e) {
+      // You can handle errors internally or rethrow them to be caught by catchError where this function is called
+      Log.d("Error saving image: $e"); // Rethrow the error
+      return false;
+    }
+  }
+
+  void _saveCanvas() async {
+    // First, request permissions
+    await requestPermissions();
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible:
+      false, // User must not dismiss the dialog by tapping outside of it
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text("Saving image..."),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    // Then try to save the image
+    saveImage().then((success) {
+      Navigator.of(context).pop(); // Dismiss the progress dialog
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image saved successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save image')),
+        );
+      }
+    }).catchError((error) {
+      Navigator.of(context)
+          .pop(); // Ensure the progress dialog is dismissed even on error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $error')),
+      );
+    });
   }
 
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For JSON processing
+import "log.dart";
 
 class TraceImagePicker extends StatefulWidget {
   final Function(String) onSelect; // Callback to pass the selected image URL back
@@ -39,7 +40,7 @@ class _TraceImagePickerState extends State<TraceImagePicker> {
         throw Exception('Failed to load images');
       }
     } catch (e) {
-      print('Error fetching images: $e');
+      Log.d('Error fetching images: $e');
     }
   }
 
