@@ -16,6 +16,7 @@ import '../utils/tts_helper.dart';
 import '../utils/trace_image_picker.dart';
 import "../utils/user_messages.dart";
 import "../utils/sketch_painter_v2.dart";
+import '../utils/log.dart';
 
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
@@ -517,9 +518,7 @@ class _TraceScreenState extends State<TraceScreen>
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error sharing canvas: $e');
-      }
+      Log.d('Error sharing canvas: $e');
     }
   }
 
@@ -598,22 +597,16 @@ class _TraceScreenState extends State<TraceScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          if (kDebugMode) {
-            print("Response from model: $responseText");
-          }
+          Log.d("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
             ttsHelper.speak(responseText);
           }
         } else {
-          if (kDebugMode) {
-            print("Content is not safe for children.");
-          }
+          Log.d("Content is not safe for children.");
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
-        }
+        Log.d("Failed to get response: ${response.body}");
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
@@ -661,9 +654,7 @@ class _TraceScreenState extends State<TraceScreen>
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          if (kDebugMode) {
-            print("Response from model: $responseText");
-          }
+          Log.d("Response from model: $responseText");
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
@@ -681,25 +672,17 @@ class _TraceScreenState extends State<TraceScreen>
                 decodeAndSetImage(bytesImage!);
               });
             } else {
-              if (kDebugMode) {
-                print('No image returned from the API');
-              }
+              Log.d('No image returned from the API');
             }
           } catch (e) {
-            if (kDebugMode) {
-              print('Error calling OpenAI image generation API: $e');
-            }
+            Log.d('Error calling OpenAI image generation API: $e');
           }
         } else {
-          if (kDebugMode) {
-            print("Content is not safe for children.");
-          }
+          Log.d("Content is not safe for children.");
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
-        }
+        Log.d("Failed to get response: ${response.body}");
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {

@@ -73,12 +73,7 @@ class _CameraCaptureState extends State<CameraCapture> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Take a Picture'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.switch_camera),
-            onPressed: cameras.length > 1 ? _switchCamera : null, // only enable if multiple cameras are available
-          ),
-        ],
+        backgroundColor: Colors.lightBlue,
       ),
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
@@ -92,9 +87,22 @@ class _CameraCaptureState extends State<CameraCapture> {
           }
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _takePicture,
-        child: Icon(Icons.camera_alt),
+
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.blue, // Set the color of the bottom area here
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(Icons.photo_camera),
+              onPressed: _takePicture,
+            ),
+            IconButton(
+              icon: Icon(Icons.switch_camera),
+              onPressed: cameras.length > 1 ? _switchCamera : null, // only enable if multiple cameras are available
+            ),
+          ],
+        ),
       ),
     );
   }

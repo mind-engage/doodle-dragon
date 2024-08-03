@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/user_messages.dart';
 import '../utils/sketch_painter_v2.dart';
+import '../utils/log.dart';
 
 enum AiMode { Analysis, SketchToImage }
 
@@ -392,9 +393,7 @@ class _SketchScreenState extends State<SketchScreen> {
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error sharing canvas: $e');
-      }
+        Log.d('Error sharing canvas: $e');
     }
   }
 
@@ -452,9 +451,7 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          if (kDebugMode) {
-            print("Response from model: $responseText");
-          }
+          Log.d("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
             _analysisMessage(responseText);
           } else if (selectedMode == AiMode.SketchToImage) {
@@ -476,26 +473,18 @@ class _SketchScreenState extends State<SketchScreen> {
                   showSketch = false;
                 });
               } else {
-                if (kDebugMode) {
-                  print('No image returned from the API');
-                }
+                  Log.d('No image returned from the API');
               }
             } catch (e) {
-              if (kDebugMode) {
-                print('Error calling OpenAI image generation API: $e');
-              }
+              Log.d('Error calling OpenAI image generation API: $e');
             }
           }
         } else {
-          if (kDebugMode) {
-            print("Content is not safe for children.");
-          }
+          Log.d("Content is not safe for children.");
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
-        }
+        Log.d("Failed to get response: ${response.body}");
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
@@ -543,9 +532,7 @@ class _SketchScreenState extends State<SketchScreen> {
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
-          if (kDebugMode) {
-            print("Response from model: $responseText");
-          }
+          Log.d("Response from model: $responseText");
           // Generate an image from a text prompt
           try {
             final imageResponse = await OpenAI.instance.image.create(
@@ -563,25 +550,17 @@ class _SketchScreenState extends State<SketchScreen> {
                 decodeAndSetImage(bytesImage);
               });
             } else {
-              if (kDebugMode) {
-                print('No image returned from the API');
-              }
+              Log.d('No image returned from the API');
             }
           } catch (e) {
-            if (kDebugMode) {
-              print('Error calling OpenAI image generation API: $e');
-            }
+            Log.d('Error calling OpenAI image generation API: $e');
           }
         } else {
-          if (kDebugMode) {
-            print("Content is not safe for children.");
-          }
+          Log.d("Content is not safe for children.");
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
-        if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
-        }
+        Log.d("Failed to get response: ${response.body}");
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
