@@ -11,12 +11,21 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:async';
-import 'utils/image_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import "../utils/user_messages.dart";
 import "../utils/sketch_painter_v2.dart";
 import "../utils/camera_capture.dart";
+import 'package:photo_manager/photo_manager.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../utils/log.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 enum AiMode { Story, Transform, Poetry, PromptToImage }
 
@@ -69,11 +78,12 @@ class _ImagenScreenState extends State<ImagenScreen>
       case AiMode.Story:
         return "Tell me a short, engaging story, suitable for a $learnerAge year old, based on the image. I want the story to be fun and maybe a little silly!";
       case AiMode.Poetry:
-        return "Take a look at this wonderful image  $learnerAge year old wants to learn about! Let's write a poem together, just like they might write it, about what we see in the picture. " ""
+        return "Take a look at this wonderful image  $learnerAge year old wants to learn about! Let's write a poem together, just like they might write it, about what we see in the picture. "
+            ""
             "Use fun words and rhymes that a $learnerAge year old would love!";
       case AiMode.Transform:
         return "You are a storyteller and an artist. "
-        "Based on this image and the idea  $_sttText, tell me a short, engaging story suitable for a $learnerAge year old. I want the story to be fun and maybe a little silly!";
+            "Based on this image and the idea  $_sttText, tell me a short, engaging story suitable for a $learnerAge year old. I want the story to be fun and maybe a little silly!";
 
       case AiMode.PromptToImage:
         return "You are an AI agent helping a $learnerAge year old child to generate a creative and detailed prompt to be passed to text to image generation model."
@@ -88,10 +98,11 @@ class _ImagenScreenState extends State<ImagenScreen>
       case AiMode.Transform:
         return "Generate a kid friendly drawing for $learnerAge old child, for the following story line: $vlmResponse. "
             "Make the drawing in the style of a children's book illustration, with bright colors";
-        default:
-          return "";
+      default:
+        return "";
     }
   }
+
   String getWaitMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -231,21 +242,6 @@ class _ImagenScreenState extends State<ImagenScreen>
               children: <Widget>[
                 Flexible(
                   child: IconButton(
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    icon: Image.asset("assets/imagen_square.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: () {
-                      setState(() {
-                        _aiMode = AiMode.PromptToImage;
-                      });
-                      _listen();
-                    },
-                    tooltip: 'Prompt to Image',
-                  ),
-                ),
-                Flexible(
-                  child: IconButton(
                     icon: Image.asset("assets/camera.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
                     onPressed: _openCamera,
@@ -380,6 +376,31 @@ class _ImagenScreenState extends State<ImagenScreen>
       children: [
         Flexible(
           child: IconButton(
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            icon: generatedImage == null
+                ? Image.asset("assets/imagen_square.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                : Image.asset("assets/explore.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            onPressed: generatedImage == null
+                ? () {
+                    setState(() {
+                      _aiMode = AiMode.PromptToImage;
+                    });
+                    _listen();
+                  }
+                : () {
+                    setState(() {
+                      _aiMode = AiMode.Transform;
+                    });
+                    _listen();
+                  },
+            tooltip: 'Imagen',
+          ),
+        ),
+        Flexible(
+          child: IconButton(
             icon: Image.asset("assets/story.png",
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
@@ -404,23 +425,6 @@ class _ImagenScreenState extends State<ImagenScreen>
                   }
                 : _msgSGeneratePicture,
             tooltip: 'Tell a Poem',
-          ),
-        ),
-        Flexible(
-          child: IconButton(
-            icon: Image.asset("assets/explore.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            color: Colors.white,
-            highlightColor: Colors.orange,
-            onPressed: generatedImage != null
-                ? () {
-                    setState(() {
-                      _aiMode = AiMode.Transform;
-                    });
-                    _listen();
-                  }
-                : _msgSGeneratePicture,
-            tooltip: 'Explore',
           ),
         ),
         Flexible(
@@ -474,7 +478,7 @@ class _ImagenScreenState extends State<ImagenScreen>
           text: 'Check out my sketch!');
     } catch (e) {
       if (kDebugMode) {
-        print('Error sharing canvas: $e');
+        Log.d('Error sharing canvas: $e');
       }
     }
   }
@@ -509,7 +513,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       String promptText = getVlmPrompt(selectedMode); //prompts[selectedMode]!;
       if (kDebugMode) {
-        print("Prompt to Gemini: $promptText");
+        Log.d("Prompt to Gemini: $promptText");
       }
       String jsonBody = jsonEncode({
         "contents": [
@@ -537,7 +541,7 @@ class _ImagenScreenState extends State<ImagenScreen>
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           if (kDebugMode) {
-            print("Response from Gemini: $responseText");
+            Log.d("Response from Gemini: $responseText");
           }
           if (selectedMode == AiMode.Story) {
             ttsHelper.speak(responseText);
@@ -549,7 +553,7 @@ class _ImagenScreenState extends State<ImagenScreen>
             try {
               final imageResponse = await OpenAI.instance.image.create(
                 model: 'dall-e-3',
-                prompt:getImageGenPrompt(selectedMode, responseText),
+                prompt: getImageGenPrompt(selectedMode, responseText),
                 n: 1,
                 size: OpenAIImageSize.size1024,
                 responseFormat: OpenAIImageResponseFormat.b64Json,
@@ -564,26 +568,26 @@ class _ImagenScreenState extends State<ImagenScreen>
                 ttsHelper.speak(responseText);
               } else {
                 if (kDebugMode) {
-                  print('No image returned from the API');
+                  Log.d('No image returned from the API');
                 }
                 ttsHelper.speak("Failed to generate image. Try again");
               }
             } catch (e) {
               if (kDebugMode) {
-                print('Error calling OpenAI image generation API: $e');
+                Log.d('Error calling OpenAI image generation API: $e');
               }
               ttsHelper.speak("Failed to generate image. Try again");
             }
           }
         } else {
           if (kDebugMode) {
-            print("Content is not safe for children.");
+            Log.d("Content is not safe for children.");
           }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
+          Log.d("Failed to get response: ${response.body}");
         }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
@@ -633,7 +637,7 @@ class _ImagenScreenState extends State<ImagenScreen>
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           if (kDebugMode) {
-            print("Response from model: $responseText");
+            Log.d("Response from model: $responseText");
           }
           // Generate an image from a text prompt
           try {
@@ -653,23 +657,23 @@ class _ImagenScreenState extends State<ImagenScreen>
               });
             } else {
               if (kDebugMode) {
-                print('No image returned from the API');
+                Log.d('No image returned from the API');
               }
             }
           } catch (e) {
             if (kDebugMode) {
-              print('Error calling OpenAI image generation API: $e');
+              Log.d('Error calling OpenAI image generation API: $e');
             }
           }
         } else {
           if (kDebugMode) {
-            print("Content is not safe for children.");
+            Log.d("Content is not safe for children.");
           }
           ttsHelper.speak("Sorry, content issue. Try again");
         }
       } else {
         if (kDebugMode) {
-          print("Failed to get response: ${response.body}");
+          Log.d("Failed to get response: ${response.body}");
         }
         ttsHelper.speak("Sorry, network issue. Try again");
       }
@@ -681,48 +685,85 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
-  void _saveGeneratedImage() async {
-    if (generatedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No image to save')),
-      );
-      return;
+  Future<void> requestPermissions() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
     }
+  }
 
+  Future<bool> saveImage() async {
     try {
       ByteData? byteData =
           await generatedImage!.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-      final directory = (await getApplicationDocumentsDirectory()).path;
-      String filename =
-          'generated_image_${DateTime.now().millisecondsSinceEpoch}.png';
-      File imgFile = File('$directory/$filename');
-      await imgFile.writeAsBytes(pngBytes);
-
-      // Optionally, show a message that the file has been saved.
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image saved to $filename')),
-        );
-      }
+      final result = await ImageGallerySaver.saveImage(pngBytes,
+          quality: 60, name: "hello");
+      Log.d(result);
+      return true;
     } catch (e) {
-      if (kDebugMode) {
-        print('Error saving generated image: $e');
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save image')),
-        );
-      }
+      // You can handle errors internally or rethrow them to be caught by catchError where this function is called
+      Log.d("Error saving image: $e"); // Rethrow the error
+      return false;
     }
   }
 
+  void _saveGeneratedImage() async {
+    // First, request permissions
+    await requestPermissions();
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible:
+          false, // User must not dismiss the dialog by tapping outside of it
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text("Saving image..."),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    // Then try to save the image
+    saveImage().then((success) {
+      Navigator.of(context).pop(); // Dismiss the progress dialog
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image saved successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save image')),
+        );
+      }
+    }).catchError((error) {
+      Navigator.of(context)
+          .pop(); // Ensure the progress dialog is dismissed even on error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $error')),
+      );
+    });
+  }
+
   Future<void> _loadImageFromLibrary() async {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => ImagePicker(onSelect: (File file) {
-              _setImage(file);
-            })));
+    final ImagePicker _picker = ImagePicker();
+    // Pick an image
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      File imageFile = File(image.path);
+      _setImage(imageFile);
+    }
   }
 
   void _setImage(File file) async {
