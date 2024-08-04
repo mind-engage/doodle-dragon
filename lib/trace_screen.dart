@@ -487,11 +487,16 @@ class _TraceScreenState extends State<TraceScreen>
 
     Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => TraceImagePicker(
-            onSelect: (String imageUrl) async {
-              // Download the image from the URL
-              File imageFile =
-                  await _downloadFile(imageUrl, 'selected_image.png');
-              _setImage(imageFile);
+            onSelect: (String imagePath) async {
+              if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+                // If the selected image is from a URL
+                File imageFile = await _downloadFile(imagePath, 'selected_image.png');
+                _setImage(imageFile);
+              } else {
+                // If the selected image is from the local gallery
+                File localImageFile = File(imagePath);
+                _setImage(localImageFile);
+              }
             },
             folder: getTraceLibrary())));
   }

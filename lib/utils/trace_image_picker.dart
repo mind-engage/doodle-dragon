@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // For JSON processing
 import "log.dart";
+import 'package:image_picker/image_picker.dart';
 
 class TraceImagePicker extends StatefulWidget {
   final Function(String) onSelect; // Callback to pass the selected image URL back
@@ -44,11 +45,27 @@ class _TraceImagePickerState extends State<TraceImagePicker> {
     }
   }
 
+  Future<void> _pickImageFromGallery() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      widget.onSelect(image.path); // Pass the local file path
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Select an Image'),
+        backgroundColor: Colors.lightBlue,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.photo_library),
+            onPressed: _pickImageFromGallery,
+          )
+        ],
       ),
       body: buildImageGrid(),
     );
