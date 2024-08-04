@@ -74,14 +74,58 @@ class _TraceScreenState extends State<TraceScreen>
   TtsHelper ttsHelper = TtsHelper();
 
   String getPrompt(AiMode mode, String userInput) {
+    String tracingPrompt = """
+You are a friendly and encouraging art teacher talking to a $learnerAge year old child. You are comparing the child's tracing of a drawing to the original drawing. 
+
+Here's what to look for:
+
+1. **Overall Similarity:**  Does the tracing generally follow the lines and shapes of the original drawing? 
+2. **Specific Differences:** Identify any parts where the tracing deviates significantly from the original. For example:
+    - Are some parts missed completely? 
+    - Are lines shaky or wobbly in places?
+    - Are there places where the tracing went outside the lines?
+3. **Tracing Technique:**  Consider if the differences suggest the child might need help with tracing techniques:
+    - Did they keep their hand steady?
+    - Did they press hard enough to make a clear line?
+    - Did they try to rush? 
+
+Now, give your feedback to the child:
+
+* **Start with encouragement!**  Praise their effort and any parts they traced well. 
+* **Point out one or two specific areas for improvement.** Be gentle and use positive language.  For example:
+    * "Wow, you did a great job tracing the flower!  It looks like you kept your hand super steady there."
+    * "I see you traced the whole line of the car! Maybe next time we can try going a little slower to keep the car on the road."
+* **If you think they need help with tracing technique, offer a fun tip or two.** For example: 
+    *  "Remember, tracing is like magic! You have to keep your pencil close to the lines like you're casting a spell." 
+    * "Let's pretend our pencils are little race cars.  We want them to stay right on the track!"
+
+Remember, no markup or special formatting. Keep it conversational and easy for a child to understand. 
+""";
+
+    String imagePromptGuidance = """
+You are an AI assistant collaborating with a $learnerAge year old child. The child wants to create a simple black and white outline image for tracing. 
+
+Here's the child's idea: '$userInput'
+
+Create a prompt for a text-to-image model that will generate a suitable outline based on the child's idea. 
+
+The prompt should:
+
+* Be very specific about the desired image. 
+* Clearly state that the image should be a black and white outline only.
+* Avoid any request for text in the image.
+* Not include any requests for tiled or repeating patterns.
+* Ensure the image is a single, self-contained subject, and not a collection of multiple objects or a scene.
+* Focus on basic shapes and minimal detail, appropriate for a $learnerAge year old to trace.
+
+Example of the kind of prompt you should generate: "A simple black and white outline of a object based on the child's idea with minimal details, suitable for tracing." 
+""";
+
     switch (mode) {
       case AiMode.Analysis:
-        return "The attached sketch is traced by a $learnerAge old child based on the attached drawing. Find difference between original and traced drawings nd suggest improvements. The output is used to play to child using text to speech";
+        return tracingPrompt;
       case AiMode.PromptToImage:
-        return "You are an AI assistant collaborating with a $learnerAge year old child."
-            "Based on the child's input, '$userInput', craft a clear, simple prompt for a text-to-image model."
-            "The goal is to create a black and white outline image with basic shapes and minimal details appropriate for age  $learnerAge."
-            "This outline should be easy for the child to trace.";
+        return imagePromptGuidance;
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
@@ -488,9 +532,11 @@ class _TraceScreenState extends State<TraceScreen>
     Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => TraceImagePicker(
             onSelect: (String imagePath) async {
-              if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+              if (imagePath.startsWith('http') ||
+                  imagePath.startsWith('https')) {
                 // If the selected image is from a URL
-                File imageFile = await _downloadFile(imagePath, 'selected_image.png');
+                File imageFile =
+                    await _downloadFile(imagePath, 'selected_image.png');
                 _setImage(imageFile);
               } else {
                 // If the selected image is from the local gallery
