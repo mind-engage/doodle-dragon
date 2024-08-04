@@ -48,6 +48,8 @@ class _ImagenScreenState extends State<ImagenScreen>
   GlobalKey repaintBoundaryKey = GlobalKey();
   bool isLoading = false;
   ui.Image? generatedImage;
+  String generatedStory = "";
+  String generatedPoem = "";
 
   double iconWidth = 80;
   double iconHeight = 80;
@@ -457,6 +459,8 @@ class _ImagenScreenState extends State<ImagenScreen>
     final frame = await codec.getNextFrame();
     setState(() {
       generatedImage = frame.image;
+      generatedStory = "";
+      generatedPoem = "";
     });
   }
 
@@ -475,7 +479,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       // Using Share.shareXFiles from share_plus
       await Share.shareXFiles([XFile(imgFile.path)],
-          text: 'Check out my sketch!');
+          text: 'Check out my sketch!\n\n$generatedPoem\n\n$generatedStory');
     } catch (e) {
       if (kDebugMode) {
         Log.d('Error sharing canvas: $e');
@@ -544,8 +548,14 @@ class _ImagenScreenState extends State<ImagenScreen>
             Log.d("Response from Gemini: $responseText");
           }
           if (selectedMode == AiMode.Story) {
+            setState(() {
+              generatedStory = responseText;
+            });
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Poetry) {
+            setState(() {
+              generatedPoem = responseText;
+            });
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Transform) {
             //ttsHelper.speak(responseText);
