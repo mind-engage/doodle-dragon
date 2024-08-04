@@ -61,15 +61,23 @@ class _SketchScreenState extends State<SketchScreen> {
   int learnerAge = 3;
   bool _isWelcoming = false;
   bool _isAnalysing = false;
+  List<Map<String, dynamic>> chatHistory = [];
 
   TtsHelper ttsHelper = TtsHelper();
 
   String getPrompt(AiMode mode) {
+    String historyContext = chatHistory.join(" ");
     switch (mode) {
       case AiMode.Analysis:
-        return "Describe this children's drawing in detail, imagining you are talking to a $learnerAge old child."
-            "Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell."
-            "Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
+        historyContext = _buildHistoryContext();
+        if (chatHistory.isNotEmpty &&
+            chatHistory.last['sender'] == 'AI' &&
+            chatHistory.last['type'] == 'text') {
+          return "$historyContext Did the child follow any of the suggestions from the previous drawing? If so, say to him few encouraging words to the child. Also provide some new suggestions based on this latest drawing. Only child's latest drawing is provided to you. You have to provide your feedback based on this drawing and attached history";
+        } else {
+          // No need for $historyContext here
+          return "Describe this children's drawing in detail, imagining you are talking to a $learnerAge old child. Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell. Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
+        }
       case AiMode.SketchToImage:
         return "Imagine you're telling a magical art fairy how to make a super cool picture from this drawing."
             "The picture for a $learnerAge old child."
@@ -77,6 +85,30 @@ class _SketchScreenState extends State<SketchScreen> {
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
+  }
+
+  void updateChatHistory(String content, String sender, [String type = 'text']) {
+    chatHistory.add({
+      'content': content,
+      'sender': sender,
+      'type': type // 'text' or 'image'
+    });
+    if (chatHistory.length >
+        20) { // Limit the history size to prevent overly long prompts
+      chatHistory.removeAt(0); // Remove the oldest entry
+    }
+  }
+
+  String _buildHistoryContext() {
+    String context = "";
+    for (var message in chatHistory) {
+      if (message['type'] == 'image') {
+        context += "User drew a picture. ";
+      } else {
+        context += "${message['sender']}: ${message['content']} ";
+      }
+    }
+    return context;
   }
 
   String getMessageToUser(AiMode mode) {
@@ -542,6 +574,8 @@ class _SketchScreenState extends State<SketchScreen> {
           String responseText = candidate['content']['parts'][0]['text'];
           Log.d("Response from model: $responseText");
           if (selectedMode == AiMode.Analysis) {
+            updateChatHistory('', 'User', 'image');
+            updateChatHistory(responseText, 'AI');
             _analysisMessage(responseText);
           } else if (selectedMode == AiMode.SketchToImage) {
             // Generate an image from a text prompt
