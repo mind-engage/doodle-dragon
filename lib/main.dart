@@ -23,8 +23,8 @@ class DoodleDragon extends StatelessWidget {
     return MaterialApp(
       title: 'Doodle Dragon',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple, // Choose a vibrant color scheme
-        fontFamily: 'ComicSansMS', // A kid-friendly font if available
+        primarySwatch: Colors.deepPurple,
+        fontFamily: 'ComicSansMS',
       ),
       home: HomeScreen(),
     );
@@ -98,88 +98,78 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
               SizedBox(height: 40),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => SketchScreen(
-                            geminiApiKey:
-                                dotenv.get('GEMINI_API_KEY', fallback: ''),
-                            openaiApiKey:
-                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
-                  );
-                },
-                child: Row(
-                  mainAxisSize:
-                      MainAxisSize.min, // Aligns children closely together
-                  children: <Widget>[
-                    Image.asset('assets/pencil_icon.png', height: 60),
-                    SizedBox(
-                        width: 10), // Spacing between the image and the text
-                    Text('Start Sketching!'),
-                  ],
+              _buildElevatedButton(
+                context,
+                'Start Sketching!',
+                'assets/pencil_icon.png',
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SketchScreen(
+                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => TraceScreen(
-                            geminiApiKey:
-                                dotenv.get('GEMINI_API_KEY', fallback: ''),
-                            openaiApiKey:
-                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Image.asset('assets/trace_icon.png', height: 60),
-                    SizedBox(width: 10),
-                    Text('Start Tracing!'),
-                  ],
+              _buildElevatedButton(
+                context,
+                'Start Tracing!',
+                'assets/trace_icon.png',
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TraceScreen(
+                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ImagenScreen(
-                            geminiApiKey:
-                                dotenv.get('GEMINI_API_KEY', fallback: ''),
-                            openaiApiKey:
-                                dotenv.get('OPENAI_API_KEY', fallback: ''))),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Image.asset('assets/imagen_icon.png', height: 60),
-                    SizedBox(width: 10),
-                    Text('Start Imagen!'),
-                  ],
+              _buildElevatedButton(
+                context,
+                'Start Imagen!',
+                'assets/imagen_icon.png',
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImagenScreen(
+                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
+                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildElevatedButton(
+      BuildContext context, String text, String imagePath, VoidCallback onPressed) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        textStyle: TextStyle(
+          fontSize: 20,         // Increase font size
+          fontWeight: FontWeight.bold, // Make text bold
+          fontFamily: 'ComicSansMS',
+          inherit: false,     // <-- Add this line to fix the error!
+        ),
+      ),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Image.asset(imagePath, height: 60),
+          SizedBox(width: 10),
+          Text(text),
+        ],
       ),
     );
   }

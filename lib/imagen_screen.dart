@@ -125,7 +125,7 @@ class _ImagenScreenState extends State<ImagenScreen>
       case AiMode.Transform:
         return "Tell me what to explore";
       case AiMode.PromptToImage:
-        return "Can you tell me what you'd like to draw?";
+        return "Tell me about your imagination?";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
