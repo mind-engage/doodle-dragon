@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'sketch_screen.dart';
 import 'trace_screen.dart';
 import 'imagen_screen.dart';
 import 'settings_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/services.dart';
 
 Future main() async {
-  await dotenv.load(fileName: "dotenv");
-  // Lock screen orientation to portrait
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: "dotenv");
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(DoodleDragon());
+  runApp(await DoodleDragon.initialize());
 }
 
 class DoodleDragon extends StatelessWidget {
+  final String geminiApiKey;
+  final String openaiApiKey;
+
+  DoodleDragon({required this.geminiApiKey, required this.openaiApiKey});
+
+  static Future<DoodleDragon> initialize() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String geminiApiKey = dotenv.get('GEMINI_API_KEY', fallback: prefs.getString('GEMINI_API_KEY') ?? '');
+    String openaiApiKey = dotenv.get('OPENAI_API_KEY', fallback: prefs.getString('OPENAI_API_KEY') ?? '');
+    return DoodleDragon(geminiApiKey: geminiApiKey, openaiApiKey: openaiApiKey);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -26,18 +38,22 @@ class DoodleDragon extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         fontFamily: 'ComicSansMS',
       ),
-      home: HomeScreen(),
+      home: HomeScreen(geminiApiKey: geminiApiKey, openaiApiKey: openaiApiKey),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
+  final String geminiApiKey;
+  final String openaiApiKey;
+
+  HomeScreen({required this.geminiApiKey, required this.openaiApiKey});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -45,13 +61,10 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
       duration: Duration(milliseconds: 800),
+      vsync: this,
     )..repeat(reverse: true);
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
   @override
@@ -69,12 +82,7 @@ class _HomeScreenState extends State<HomeScreen>
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsScreen()),
-              );
-            },
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen())),
           ),
         ],
       ),
@@ -92,56 +100,17 @@ class _HomeScreenState extends State<HomeScreen>
             children: <Widget>[
               RotationTransition(
                 turns: _animation,
-                child: Image.asset(
-                  'assets/doodle_dragon_logo.png',
-                  height: 200,
-                ),
+                child: Image.asset('assets/doodle_dragon_logo.png', height: 200),
               ),
               SizedBox(height: 40),
-              _buildElevatedButton(
-                context,
-                'Start Sketching!',
-                'assets/pencil_icon.png',
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SketchScreen(
-                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
-                    ),
-                  ),
-                ),
-              ),
+              _buildElevatedButton('Start Sketching!', 'assets/pencil_icon.png', () => Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => SketchScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
               SizedBox(height: 20),
-              _buildElevatedButton(
-                context,
-                'Start Tracing!',
-                'assets/trace_icon.png',
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TraceScreen(
-                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
-                    ),
-                  ),
-                ),
-              ),
+              _buildElevatedButton('Start Tracing!', 'assets/trace_icon.png', () => Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => TraceScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
               SizedBox(height: 20),
-              _buildElevatedButton(
-                context,
-                'Start Imagen!',
-                'assets/imagen_icon.png',
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ImagenScreen(
-                      geminiApiKey: dotenv.get('GEMINI_API_KEY', fallback: ''),
-                      openaiApiKey: dotenv.get('OPENAI_API_KEY', fallback: ''),
-                    ),
-                  ),
-                ),
-              ),
+              _buildElevatedButton('Start Imagen!', 'assets/imagen_icon.png', () => Navigator.push(
+                  context, MaterialPageRoute(builder: (context) => ImagenScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
             ],
           ),
         ),
@@ -149,17 +118,15 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildElevatedButton(
-      BuildContext context, String text, String imagePath, VoidCallback onPressed) {
+  Widget _buildElevatedButton(String text, String imagePath, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.green,
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         textStyle: TextStyle(
-          fontSize: 20,         // Increase font size
-          fontWeight: FontWeight.bold, // Make text bold
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
           fontFamily: 'ComicSansMS',
-          inherit: false,     // <-- Add this line to fix the error!
         ),
       ),
       onPressed: onPressed,
