@@ -1,3 +1,4 @@
+// Import necessary Dart and Flutter packages for the SketchScreen functionality.
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -18,67 +19,70 @@ import '../utils/log.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// Define an enumeration for different AI modes available in the app.
 enum AiMode { Analysis, SketchToImage }
 
+// Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
-  const SketchScreen(
-      {super.key, required this.geminiApiKey, required this.openaiApiKey});
+
+  // Constructor for the SketchScreen which takes required API keys.
+  const SketchScreen({
+    super.key,
+    required this.geminiApiKey,
+    required this.openaiApiKey
+  });
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
 }
 
+// Private State class handling the logic and UI of SketchScreen.
 class _SketchScreenState extends State<SketchScreen> {
-  List<ColoredPoint> points = [];
-  bool showSketch = true;
-  bool isErasing = false; // Add this line
+  List<ColoredPoint> points = [];  // Stores the points drawn on the canvas.
+  bool showSketch = true;          // Flag to toggle sketch visibility.
+  bool isErasing = false;          // Flag to determine if the user is erasing.
 
-  GlobalKey repaintBoundaryKey = GlobalKey();
-  bool isLoading = false;
-  final double canvasWidth = 1024;
-  final double canvasHeight = 1920;
-  ui.Image? generatedImage;
-  final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];
-  final int _currentTransparencyLevel = 3;
+  GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
+  bool isLoading = false;                      // Flag to show a loading indicator when processing.
+  final double canvasWidth = 1024;             // Define canvas width.
+  final double canvasHeight = 1920;            // Define canvas height.
+  ui.Image? generatedImage;                    // Store generated image from AI analysis.
+  final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];  // Transparency levels for UI components.
+  final int _currentTransparencyLevel = 3;                         // Current transparency level index.
 
-  double iconWidth = 80;
-  double iconHeight = 80;
-
-  Color selectedColor = Colors.black; // Default color
-  double currentStrokeWidth = 5.0;
-  List<Color> colorPalette = [
-    Colors.black,
-    Colors.red,
-    Colors.green,
-    Colors.blue,
-    Colors.yellow,
-    const Color(0xFFf4c7a6),
-    const Color(0xFF852311),
-    const Color(0xFFe9a885)
+  double iconWidth = 80;          // Icon width in the UI.
+  double iconHeight = 80;         // Icon height in the UI.
+  Color selectedColor = Colors.black;  // Default drawing color.
+  double currentStrokeWidth = 5.0;     // Default stroke width.
+  List<Color> colorPalette = [         // Color palette for the drawing tool.
+    Colors.black, Colors.red, Colors.green, Colors.blue, Colors.yellow,
+    const Color(0xFFf4c7a6), const Color(0xFF852311), const Color(0xFFe9a885)
   ];
 
-  late SharedPreferences prefs;
-  String learnerName = "John";
-  int learnerAge = 3;
-  bool _isWelcoming = false;
-  bool _isAnalysing = false;
-  List<Map<String, dynamic>> chatHistory = [];
+  late SharedPreferences prefs;    // SharedPreferences instance for local storage.
+  String learnerName = "John";     // Default name used in interactions.
+  int learnerAge = 3;              // Default age used in interactions.
+  bool _isWelcoming = false;       // Flag to manage state of welcome message.
+  bool _isAnalysing = false;       // Flag to manage state of analysis.
+  List<Map<String, dynamic>> chatHistory = []; // History of interactions for context.
 
-  TtsHelper ttsHelper = TtsHelper();
+  TtsHelper ttsHelper = TtsHelper(); // Text-to-speech helper instance.
 
+  // Generate appropriate prompts based on the current AI mode.
   String getPrompt(AiMode mode) {
+    // Method to generate interaction prompts based on the selected AI mode.
     String historyContext = chatHistory.join(" ");
     switch (mode) {
       case AiMode.Analysis:
         historyContext = _buildHistoryContext();
+        // Condition to tailor the prompt if the last interaction was from AI.
         if (chatHistory.isNotEmpty &&
             chatHistory.last['sender'] == 'AI' &&
             chatHistory.last['type'] == 'text') {
           return "$historyContext Did the child follow any of the suggestions from the previous drawing? If so, say to him few encouraging words to the child. Also provide some new suggestions based on this latest drawing. Only child's latest drawing is provided to you. You have to provide your feedback based on this drawing and attached history";
         } else {
-          // No need for $historyContext here
           return "Describe this children's drawing in detail, imagining you are talking to a $learnerAge old child. Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell. Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
         }
       case AiMode.SketchToImage:
@@ -90,6 +94,7 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  // Update the chat history with new entries.
   void updateChatHistory(String content, String sender, [String type = 'text']) {
     chatHistory.add({
       'content': content,
@@ -102,6 +107,7 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  // Build a context string from the chat history for AI interactions.
   String _buildHistoryContext() {
     String context = "";
     for (var message in chatHistory) {
@@ -114,6 +120,7 @@ class _SketchScreenState extends State<SketchScreen> {
     return context;
   }
 
+  // Generate a message to the user based on the AI mode.
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
@@ -125,22 +132,25 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  // Initialize settings and configure initial state.
   @override
   void initState() {
     super.initState();
     loadSettings();
-    OpenAI.apiKey = widget.openaiApiKey;
+    OpenAI.apiKey = widget.openaiApiKey; // Set OpenAI API key from widget property.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _welcomeMessage();
+      _welcomeMessage(); // Display a welcome message after the frame build is complete.
     });
   }
 
+  // Dispose of resources when the widget is removed from the tree.
   @override
   void dispose() {
-    ttsHelper.stop();
+    ttsHelper.stop(); // Stop any ongoing TTS playback.
     super.dispose();
   }
 
+  // Load settings from shared preferences.
   Future<void> loadSettings() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -149,28 +159,37 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
+  // Display a welcome message to the user.
   void _welcomeMessage() {
     _isWelcoming = true;
     ttsHelper.speak(userMessageSketchScreen);
   }
 
+  // Stop the welcome message.
   void _stopWelcome() {
     _isWelcoming = false;
     ttsHelper.stop();
   }
 
+  // Play an analysis message.
   void _analysisMessage(String message) {
     _isAnalysing = true;
     ttsHelper.speak(message);
   }
+
+  // Stop the analysis message.
   void _stopAnalysis() {
     _isAnalysing = false;
     ttsHelper.stop();
   }
+
+  // Stop TTS playback based on the current state.
   void _stopTts() {
-    if(_isAnalysing) _stopAnalysis;
-    if(_isWelcoming) _stopWelcome();
+    if (_isAnalysing) _stopAnalysis();
+    if (_isWelcoming) _stopWelcome();
   }
+
+  // Build the main UI for the sketch screen.
   @override
   Widget build(BuildContext context) {
     bool isLandscape =
@@ -259,63 +278,65 @@ class _SketchScreenState extends State<SketchScreen> {
       bottomNavigationBar: isLandscape
           ? null
           : BottomAppBar(
-              color: Colors.lightBlue,
-              height: 180,
-              child: controlPanelPortrait(),
-            ),
+        color: Colors.lightBlue,
+        height: 180,
+        child: controlPanelPortrait(),
+      ),
     );
   }
 
+  // Build the drawing area of the application.
   Widget buildBody() => Column(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                if (_isWelcoming) _stopWelcome();
-                if (_isAnalysing) _stopAnalysis();
-                setState(() {
-                  RenderBox renderBox = context.findRenderObject() as RenderBox;
-                  double appBarHeight =
-                      150; // Update this if the AppBar height changes
-                  double topPadding = MediaQuery.of(context).padding.top;
+    children: [
+      Expanded(
+        child: GestureDetector(
+          onPanUpdate: (details) {
+            if (_isWelcoming) _stopWelcome();
+            if (_isAnalysing) _stopAnalysis();
+            setState(() {
+              RenderBox renderBox = context.findRenderObject() as RenderBox;
+              double appBarHeight =
+              150; // Update this if the AppBar height changes
+              double topPadding = MediaQuery.of(context).padding.top;
 
-                  Offset adjustedPosition = details.globalPosition -
-                      Offset(0, appBarHeight + topPadding);
-                  Offset localPosition =
-                      renderBox.globalToLocal(adjustedPosition);
+              Offset adjustedPosition = details.globalPosition -
+                  Offset(0, appBarHeight + topPadding);
+              Offset localPosition =
+              renderBox.globalToLocal(adjustedPosition);
 
-                  if (!isErasing) {
-                    points.add(ColoredPoint(
-                        localPosition, selectedColor, currentStrokeWidth));
-                  } else {
-                    // Erasing could be refined to work with paths if necessary
-                    points = points
-                        .where((p) =>
-                            p.point == null ||
-                            (p.point! - localPosition).distance >
-                                20) // Adjust distance as needed
-                        .toList();
-                  }
-                });
-              },
-              onPanEnd: (details) {
-                // Add a null point to signal the end of a path
-                setState(() => points.add(
-                    ColoredPoint(null, selectedColor, currentStrokeWidth)));
-              },
-              child: RepaintBoundary(
-                key: repaintBoundaryKey,
-                child: CustomPaint(
-                  painter: SketchPainter(points, showSketch, generatedImage,
-                      _transparencyLevels[_currentTransparencyLevel]),
-                  child: Container(),
-                ),
-              ),
+              if (!isErasing) {
+                points.add(ColoredPoint(
+                    localPosition, selectedColor, currentStrokeWidth));
+              } else {
+                // Erasing could be refined to work with paths if necessary
+                points = points
+                    .where((p) =>
+                p.point == null ||
+                    (p.point! - localPosition).distance >
+                        20) // Adjust distance as needed
+                    .toList();
+              }
+            });
+          },
+          onPanEnd: (details) {
+            // Add a null point to signal the end of a path
+            setState(() => points.add(
+                ColoredPoint(null, selectedColor, currentStrokeWidth)));
+          },
+          child: RepaintBoundary(
+            key: repaintBoundaryKey,
+            child: CustomPaint(
+              painter: SketchPainter(points, showSketch, generatedImage,
+                  _transparencyLevels[_currentTransparencyLevel]),
+              child: Container(),
             ),
           ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 
+  // Build the control panel for portrait orientation.
   Widget controlPanelPortrait() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -358,9 +379,9 @@ class _SketchScreenState extends State<SketchScreen> {
                     children: [
                       Container(
                         width:
-                            40, // This width is proportional to the brush size
+                        40, // This width is proportional to the brush size
                         height:
-                            size, // Fixed height for the visual representation
+                        size, // Fixed height for the visual representation
                         color: Colors.black, // Change the color if needed
                       ),
                     ],
@@ -380,9 +401,9 @@ class _SketchScreenState extends State<SketchScreen> {
           child: IconButton(
             icon: isErasing
                 ? Image.asset("assets/eraser.png",
-                    width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
                 : Image.asset("assets/eraser.png",
-                    width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
             onPressed: () {
@@ -410,12 +431,14 @@ class _SketchScreenState extends State<SketchScreen> {
     );
   }
 
+  // Check if the content generated by AI is safe for display to children.
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
     return safetyRatings
         .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
+  // Decode and set the image from byte data for display.
   void decodeAndSetImage(Uint8List imageData) async {
     final codec = await ui.instantiateImageCodec(imageData);
     final frame = await codec.getNextFrame();
@@ -424,13 +447,14 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
+  // Share the canvas image with others.
   void shareCanvas() async {
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
@@ -441,10 +465,11 @@ class _SketchScreenState extends State<SketchScreen> {
       await Share.shareXFiles([XFile(imgFile.path)],
           text: 'Check out my sketch!');
     } catch (e) {
-        Log.d('Error sharing canvas: $e');
+      Log.d('Error sharing canvas: $e');
     }
   }
 
+  // Request necessary permissions for storage.
   Future<void> requestPermissions() async {
     var status = await Permission.storage.status;
     if (!status.isGranted) {
@@ -452,6 +477,7 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  // Save the image to the device gallery.
   Future<bool> saveImage() async {
     try {
 
@@ -474,6 +500,7 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  // Method to save the canvas image and manage UI feedback.
   void _saveCanvas() async {
     // First, request permissions
     await requestPermissions();
@@ -521,9 +548,10 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
+  // Take a snapshot of the canvas and initiate an analysis or image generation based on the selected mode.
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
     setState(() =>
-        isLoading = true); // Set loading to true when starting the analysis
+    isLoading = true); // Set loading to true when starting the analysis
 
     ttsHelper.speak(getMessageToUser(selectedMode));
 
@@ -531,14 +559,14 @@ class _SketchScreenState extends State<SketchScreen> {
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (context) =>
-          const Center(child: CircularProgressIndicator()), // Show a loading spinner
+      const Center(child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       // String base64String = await capturePng();
@@ -599,7 +627,7 @@ class _SketchScreenState extends State<SketchScreen> {
                   showSketch = false;
                 });
               } else {
-                  Log.d('No image returned from the API');
+                Log.d('No image returned from the API');
               }
             } catch (e) {
               Log.d('Error calling OpenAI image generation API: $e');
@@ -615,7 +643,7 @@ class _SketchScreenState extends State<SketchScreen> {
       }
     } finally {
       setState(() =>
-          isLoading = false);
+      isLoading = false);
       if (context.mounted) {
         Navigator.of(context).pop();
       }

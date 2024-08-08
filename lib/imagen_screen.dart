@@ -27,11 +27,13 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 
+// Enumeration to define various AI modes for the application's functionality.
 enum AiMode { Story, Transform, Poetry, PromptToImage }
 
+// StatefulWidget to handle the Imagen Screen UI and functionality.
 class ImagenScreen extends StatefulWidget {
-  final String geminiApiKey;
-  final String openaiApiKey;
+  final String geminiApiKey;  // API key for Gemini service.
+  final String openaiApiKey;  // API key for OpenAI service.
   const ImagenScreen(
       {super.key, required this.geminiApiKey, required this.openaiApiKey});
 
@@ -41,40 +43,40 @@ class ImagenScreen extends StatefulWidget {
 
 class _ImagenScreenState extends State<ImagenScreen>
     with SingleTickerProviderStateMixin {
-  List<ColoredPoint> points = [];
-  bool showSketch = true;
-  bool isErasing = false; // Add this line
+  List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
+  bool showSketch = true;          // Flag to toggle display of the sketch.
+  bool isErasing = false;          // Flag to toggle eraser mode.
 
-  GlobalKey repaintBoundaryKey = GlobalKey();
-  bool isLoading = false;
-  ui.Image? generatedImage;
-  String generatedStory = "";
-  String generatedPoem = "";
+  GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
+  bool isLoading = false;                      // Flag to show a loading indicator.
+  ui.Image? generatedImage;                    // Variable to hold the generated image.
+  String generatedStory = "";                  // Story generated from the image.
+  String generatedPoem = "";                   // Poem generated from the image.
 
-  double iconWidth = 80;
-  double iconHeight = 80;
+  double iconWidth = 80;  // Icon width for buttons.
+  double iconHeight = 80; // Icon height for buttons.
 
-  final stt.SpeechToText _speechToText = stt.SpeechToText();
-  bool _isListening = false;
-  bool _speechEnabled = false;
-  String _sttText = "";
-  OverlayEntry? _overlayEntry;
+  final stt.SpeechToText _speechToText = stt.SpeechToText();  // Speech to text instance.
+  bool _isListening = false;                                  // Flag to check if listening.
+  bool _speechEnabled = false;                                // Flag to check if speech is enabled.
+  String _sttText = "";                                       // Text obtained from speech recognition.
+  OverlayEntry? _overlayEntry;                                // Overlay entry for displaying speech text.
 
-  // Default mode for voice listen commands
-  AiMode _aiMode = AiMode.PromptToImage;
+  AiMode _aiMode = AiMode.PromptToImage;                      // Default AI mode for operations.
 
-  late SharedPreferences prefs;
-  String learnerName = "John";
-  int learnerAge = 3;
-  bool _isWelcoming = false;
+  late SharedPreferences prefs;                               // Shared preferences for storing data locally.
+  String learnerName = "John";                                // Default learner name.
+  int learnerAge = 3;                                         // Default learner age, used in prompts.
+  bool _isWelcoming = false;                                  // Flag to check if welcome message is active.
 
-  TtsHelper ttsHelper = TtsHelper();
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-  Color selectedColor = Colors.black;
-  double currentStrokeWidth = 5.0;
-  bool enablePictureZone = false;
+  TtsHelper ttsHelper = TtsHelper();                          // Text to speech helper instance.
+  late AnimationController _animationController;              // Controller for animations.
+  late Animation<double> _animation;                          // Animation details.
+  Color selectedColor = Colors.black;                         // Default selected color for drawing.
+  double currentStrokeWidth = 5.0;                            // Current stroke width for drawing.
+  bool enablePictureZone = false;                             // Flag to enable interaction with the picture zone.
 
+  // Define prompts for different AI modes based on the scenario and user interaction.
   String getVlmPrompt(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -95,6 +97,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  // Generate prompts for image creation based on VLM (Visual Language Model) responses.
   String getImageGenPrompt(AiMode mode, String vlmResponse) {
     switch (mode) {
       case AiMode.Transform:
@@ -105,6 +108,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  // Return waiting messages to the user based on the current AI mode.
   String getWaitMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Story:
@@ -120,6 +124,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  // Return specific messages for voice prompting based on AI mode.
   String getMessageForVoicePrompting(AiMode mode) {
     switch (mode) {
       case AiMode.Transform:
@@ -131,6 +136,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  // Initialize state, set up animations, and load settings.
   @override
   void initState() {
     super.initState();
@@ -140,6 +146,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     _initAnimation();
   }
 
+  // Dispose resources when the widget is removed from the tree.
   @override
   void dispose() {
     if (_isListening) {
@@ -152,6 +159,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     super.dispose();
   }
 
+  // Load settings from shared preferences and welcome the user.
   Future<void> loadSettings() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -175,11 +183,13 @@ class _ImagenScreenState extends State<ImagenScreen>
     ttsHelper.speak("First generate a picture");
   }
 
+  // Initialize speech recognition capabilities.
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
   }
 
+  // Initialize animation for interactive elements like the microphone icon.
   void _initAnimation() {
     _animationController = AnimationController(
       vsync: this,
@@ -468,6 +478,7 @@ class _ImagenScreenState extends State<ImagenScreen>
         .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
+  // Decode and set the image from byte data.
   void decodeAndSetImage(Uint8List imageData) async {
     final codec = await ui.instantiateImageCodec(imageData);
     final frame = await codec.getNextFrame();
@@ -478,6 +489,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     });
   }
 
+  // Method to handle image sharing.
   void shareCanvas() async {
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -501,6 +513,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     }
   }
 
+  // Take a snapshot of the current drawing and analyze it using AI.
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
     setState(() =>
         isLoading = true); // Set loading to true when starting the analysis

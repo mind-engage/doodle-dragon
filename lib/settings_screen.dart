@@ -3,20 +3,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'utils/child_skill_levels.dart';
 
+// Define a StatefulWidget to handle the settings screen of the app
 class SettingsScreen extends StatefulWidget {
   @override
   _SettingsScreenState createState() => _SettingsScreenState();
 }
 
+// State class for SettingsScreen
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
-  late SharedPreferences prefs;
-  late TabController _tabController;
-  String learnerName = "";
-  int learnerAge = 3;
-  String skillsText = "";
-  bool _isLoading = true;
-  String geminiApiKey = "";
-  String openaiApiKey = "";
+  late SharedPreferences prefs; // To handle local storage for settings
+  late TabController _tabController; // To control tab switching in the app bar
+  String learnerName = ""; // Store learner's name
+  int learnerAge = 3; // Store learner's age, default set to 3
+  String skillsText = ""; // Store descriptive text about skills based on age
+  bool _isLoading = true; // Boolean to handle display of loading spinner
+  String geminiApiKey = ""; // Store Gemini API key
+  String openaiApiKey = ""; // Store OpenAI API key
+
 
   @override
   void initState() {
@@ -25,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     loadSettings();
   }
 
+  // Load settings from SharedPreferences
   Future<void> loadSettings() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -37,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     });
   }
 
+  // Save settings to SharedPreferences
   Future<void> saveSettings(String key, dynamic value) async {
     if (value is String) {
       await prefs.setString(key, value);
@@ -76,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
   }
 
+  // Widget to build general settings tab
   Widget buildGeneralSettings() {
     return ListView(
       children: [
@@ -125,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       ],
     );
   }
-
+  // Widget to build API keys settings tab
   Widget buildApiKeysSettings() {
     return ListView(
       children: [

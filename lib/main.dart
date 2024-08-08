@@ -1,3 +1,4 @@
+// Import necessary Flutter and third-party packages.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,22 +8,30 @@ import 'trace_screen.dart';
 import 'imagen_screen.dart';
 import 'settings_screen.dart';
 
+// Main entry point of the Flutter application.
 Future main() async {
+  // Ensure that Flutter widgets are bound to the framework before executing any other operations.
   WidgetsFlutterBinding.ensureInitialized();
+  // Load environment variables from the .env file.
   await dotenv.load(fileName: "dotenv");
+  // Lock orientation to portrait mode.
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  // Run the application after initializing it.
   runApp(await DoodleDragon.initialize());
 }
 
+// Stateless widget for the main application.
 class DoodleDragon extends StatelessWidget {
   final String geminiApiKey;
   final String openaiApiKey;
 
+  // Constructor requiring API keys.
   DoodleDragon({required this.geminiApiKey, required this.openaiApiKey});
 
+  // Factory method to asynchronously fetch API keys from SharedPreferences or .env file before building the widget.
   static Future<DoodleDragon> initialize() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String geminiApiKey = dotenv.get('GEMINI_API_KEY', fallback: prefs.getString('GEMINI_API_KEY') ?? '');
@@ -30,6 +39,7 @@ class DoodleDragon extends StatelessWidget {
     return DoodleDragon(geminiApiKey: geminiApiKey, openaiApiKey: openaiApiKey);
   }
 
+  // Build the MaterialApp with the specified theme and home screen.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -43,20 +53,24 @@ class DoodleDragon extends StatelessWidget {
   }
 }
 
+// Stateful widget for the home screen.
 class HomeScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
 
+  // Constructor requiring API keys.
   HomeScreen({required this.geminiApiKey, required this.openaiApiKey});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
+// Private State class for HomeScreen, handling animations and UI.
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
+  // Initialize state, setting up the animation controller.
   @override
   void initState() {
     super.initState();
@@ -67,12 +81,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
+  // Dispose the controller when the widget is removed from the tree.
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  // Build the UI with AppBar and body containing buttons to navigate to different screens.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // Helper method to build a styled button with an icon.
   Widget _buildElevatedButton(String text, String imagePath, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

@@ -18,8 +18,10 @@ import "../utils/user_messages.dart";
 import "../utils/sketch_painter_v2.dart";
 import '../utils/log.dart';
 
+// Enumeration to define various AI modes for the application's functionality.
 enum AiMode { Analysis, ImageToTrace, PromptToImage }
 
+// StatefulWidget to handle the Trace Screen UI and functionality.
 class TraceScreen extends StatefulWidget {
   final String geminiApiKey;
   final String openaiApiKey;
@@ -30,49 +32,48 @@ class TraceScreen extends StatefulWidget {
   _TraceScreenState createState() => _TraceScreenState();
 }
 
+// State class for TraceScreen with additional functionality from SingleTickerProviderStateMixin for animations.
 class _TraceScreenState extends State<TraceScreen>
     with SingleTickerProviderStateMixin {
-  List<ColoredPoint> points = [];
-  bool showSketch = true;
-  bool isErasing = false; // Add this line
+  List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
+  bool showSketch = true;          // Flag to toggle display of the sketch.
+  bool isErasing = false;          // Flag to toggle eraser mode.
 
-  GlobalKey repaintBoundaryKey = GlobalKey();
-  bool isLoading = false;
-  final double canvasWidth = 1024;
-  final double canvasHeight = 1920;
-  ui.Image? generatedImage;
-  final List<double> _transparencyLevels = [0.0, 0.5, 1.0];
-  int _currentTransparencyLevel = 2;
+  GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
+  bool isLoading = false;                      // Flag to show a loading indicator.
+  final double canvasWidth = 1024;             // Canvas width.
+  final double canvasHeight = 1920;            // Canvas height.
+  ui.Image? generatedImage;                    // Variable to hold the generated image.
+  final List<double> _transparencyLevels = [0.0, 0.5, 1.0];  // Transparency levels for display.
+  int _currentTransparencyLevel = 2;                           // Current transparency level.
 
-  double iconWidth = 80;
-  double iconHeight = 80;
+  double iconWidth = 80;  // Icon width for buttons.
+  double iconHeight = 80; // Icon height for buttons.
 
-  final stt.SpeechToText _speechToText = stt.SpeechToText();
-  bool _isListening = false;
-  bool _speechEnabled = false;
-  String _sttText = "";
-  OverlayEntry? _overlayEntry;
+  final stt.SpeechToText _speechToText = stt.SpeechToText();  // Speech to text instance.
+  bool _isListening = false;                                  // Flag to check if listening.
+  bool _speechEnabled = false;                                // Flag to check if speech is enabled.
+  String _sttText = "";                                       // Text obtained from speech recognition.
+  OverlayEntry? _overlayEntry;                                // Overlay entry for displaying speech text.
 
-  Color selectedColor = Colors.black; // Default color
-  double currentStrokeWidth = 5.0;
-  List<Color> colorPalette = [
-    Colors.black,
-    Colors.red,
-    Colors.green,
-    Colors.blue,
-    Colors.yellow
+  Color selectedColor = Colors.black;   // Default selected color for drawing.
+  double currentStrokeWidth = 5.0;      // Current stroke width for drawing.
+  List<Color> colorPalette = [          // Color palette for selection.
+    Colors.black, Colors.red, Colors.green, Colors.blue, Colors.yellow
   ];
-  AiMode _aiMode = AiMode.PromptToImage;
-  int learnerAge = 3;
-  late AnimationController _animationController;
-  late Animation<double> _animation;
+  AiMode _aiMode = AiMode.PromptToImage;  // Default AI mode.
+  int learnerAge = 3;                      // Default learner age, used in prompts.
 
-  late SharedPreferences prefs;
-  String learnerName = "John";
-  bool _isWelcoming = false;
+  late AnimationController _animationController;  // Controller for animations.
+  late Animation<double> _animation;              // Animation details.
 
-  TtsHelper ttsHelper = TtsHelper();
+  late SharedPreferences prefs;  // Shared preferences for storing data locally.
+  String learnerName = "John";   // Default learner name.
+  bool _isWelcoming = false;     // Flag to check if welcome message is active.
 
+  TtsHelper ttsHelper = TtsHelper();  // Text to speech helper instance.
+
+  // Function to get prompt based on AI mode and user input.
   String getPrompt(AiMode mode, String userInput) {
     String tracingPrompt = """
 You are a friendly and encouraging art teacher talking to a $learnerAge year old child. You are comparing the child's tracing of a drawing to the original drawing. 
@@ -130,6 +131,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     }
   }
 
+  // Function to get a message to the user based on the AI mode.
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.Analysis:
@@ -141,6 +143,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     }
   }
 
+  // Function to get the appropriate library URL based on the learner's age.
   String getTraceLibrary() {
     const baseFolder =
         "https://storage.googleapis.com/storage/v1/b/doodle-dragon/o?prefix=tracing/";
@@ -153,6 +156,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     }
   }
 
+  // Initialize state, set up animations, and load settings.
   @override
   void initState() {
     super.initState();
@@ -162,6 +166,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     _initAnimation();
   }
 
+  // Dispose resources when the widget is removed from the tree.
   @override
   void dispose() {
     if (_isListening) {
@@ -173,6 +178,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     super.dispose();
   }
 
+  // Load settings from shared preferences and welcome the user.
   Future<void> loadSettings() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -196,6 +202,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     ttsHelper.speak("Select a picture to trace");
   }
 
+  // Initial speech setup.
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
     setState(() {});
@@ -228,6 +235,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     }
   }
 
+  // Build the main UI for the trace screen.
   @override
   Widget build(BuildContext context) {
     bool isLandscape =
@@ -500,12 +508,14 @@ Example of the kind of prompt you should generate: "A simple black and white out
     );
   }
 
+  // Check if the content generated by AI is safe for display.
   bool isContentSafe(Map<String, dynamic> candidate) {
     List<dynamic> safetyRatings = candidate['safetyRatings'];
     return safetyRatings
         .every((rating) => rating['probability'] == 'NEGLIGIBLE');
   }
 
+  // Decode and set the image from byte data.
   void decodeAndSetImage(Uint8List imageData) async {
     final codec = await ui.instantiateImageCodec(imageData);
     final frame = await codec.getNextFrame();
@@ -551,6 +561,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     decodeAndSetImage(bytes);
   }
 
+  // Method to handle image sharing.
   void shareCanvas() async {
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
@@ -572,6 +583,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
     }
   }
 
+  // Take a snapshot of the current drawing and analyze it using Gemini.
   void takeSnapshotAndAnalyze(
       BuildContext context, AiMode selectedMode, String userInput) async {
     if (generatedImage == null) {
