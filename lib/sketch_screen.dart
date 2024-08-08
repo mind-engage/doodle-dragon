@@ -53,7 +53,10 @@ class _SketchScreenState extends State<SketchScreen> {
     Colors.red,
     Colors.green,
     Colors.blue,
-    Colors.yellow
+    Colors.yellow,
+    const Color(0xFFf4c7a6),
+    const Color(0xFF852311),
+    const Color(0xFFe9a885)
   ];
 
   late SharedPreferences prefs;
@@ -347,7 +350,7 @@ class _SketchScreenState extends State<SketchScreen> {
             icon: Image.asset("assets/brush_size.png",
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             itemBuilder: (BuildContext context) {
-              return [5.0, 10.0, 20.0, 40.0].map((double size) {
+              return [1.0, 2.0, 5.0, 10.0, 20.0, 40.0].map((double size) {
                 return PopupMenuItem<double>(
                   value: size,
                   child: Row(

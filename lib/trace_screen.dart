@@ -112,7 +112,6 @@ Create a prompt for a text-to-image model that will generate a suitable outline 
 The prompt should:
 
 * Be very specific about the desired image. 
-* Clearly state that the image should be a black and white outline only.
 * Avoid any request for text in the image.
 * Not include any requests for tiled or repeating patterns.
 * Ensure the image is a single, self-contained subject, and not a collection of multiple objects or a scene.
@@ -431,7 +430,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
             icon: Image.asset("assets/brush_size.png",
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             itemBuilder: (BuildContext context) {
-              return [5.0, 10.0, 20.0, 40.0].map((double size) {
+              return [1.0, 2.0, 5.0, 10.0, 20.0, 40.0].map((double size) {
                 return PopupMenuItem<double>(
                   value: size,
                   child: Row(
