@@ -265,7 +265,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
                     tooltip: 'Load Image',
                   ),
                 ),
-                Flexible(
+                widget.openaiApiKey.isNotEmpty ? Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/imagen_square.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -279,7 +279,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
                     },
                     tooltip: 'Voice to Image',
                   ),
-                ),
+                ) : Container(),
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/analysis.png",

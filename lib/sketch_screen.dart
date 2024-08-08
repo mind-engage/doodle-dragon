@@ -195,7 +195,7 @@ class _SketchScreenState extends State<SketchScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Flexible(
+                widget.openaiApiKey.isNotEmpty ?  Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/sketch_to_image.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -206,7 +206,7 @@ class _SketchScreenState extends State<SketchScreen> {
                     },
                     tooltip: 'Sketch to Picture',
                   ),
-                ),
+                ) : Container(),
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/delete.png",
@@ -604,82 +604,6 @@ class _SketchScreenState extends State<SketchScreen> {
             } catch (e) {
               Log.d('Error calling OpenAI image generation API: $e');
             }
-          }
-        } else {
-          Log.d("Content is not safe for children.");
-          ttsHelper.speak("Sorry, content issue. Try again");
-        }
-      } else {
-        Log.d("Failed to get response: ${response.body}");
-        ttsHelper.speak("Sorry, network issue. Try again");
-      }
-    } finally {
-      setState(() =>
-          isLoading = false);
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
-    }
-  }
-
-  void generatePicture(BuildContext context, AiMode selectedMode) async {
-    setState(() =>
-        isLoading = true); // Set loading to true when starting the analysis
-
-    ttsHelper.speak(getMessageToUser(selectedMode));
-
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator()), // Show a loading spinner
-    );
-    try {
-      String promptText = getPrompt(selectedMode);
-      String jsonBody = jsonEncode({
-        "contents": [
-          {
-            "parts": [
-              {"text": promptText},
-            ]
-          }
-        ]
-      });
-
-      var response = await http.post(
-        Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonBody,
-      );
-
-      if (response.statusCode == 200) {
-        Map<String, dynamic> decodedResponse = jsonDecode(response.body);
-        Map<String, dynamic> candidate = decodedResponse['candidates'][0];
-        if (isContentSafe(candidate)) {
-          String responseText = candidate['content']['parts'][0]['text'];
-          Log.d("Response from model: $responseText");
-          // Generate an image from a text prompt
-          try {
-            final imageResponse = await OpenAI.instance.image.create(
-              model: 'dall-e-3',
-              prompt: responseText,
-              n: 1,
-              size: OpenAIImageSize.size1024,
-              responseFormat: OpenAIImageResponseFormat.b64Json,
-            );
-
-            if (imageResponse.data.isNotEmpty) {
-              setState(() {
-                Uint8List bytesImage = base64Decode(imageResponse.data.first
-                    .b64Json!); // Assuming URL points to a base64 image string
-                decodeAndSetImage(bytesImage);
-              });
-            } else {
-              Log.d('No image returned from the API');
-            }
-          } catch (e) {
-            Log.d('Error calling OpenAI image generation API: $e');
           }
         } else {
           Log.d("Content is not safe for children.");

@@ -376,7 +376,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(
+        widget.openaiApiKey.isNotEmpty ? Flexible(
           child: IconButton(
             color: Colors.white,
             highlightColor: Colors.orange,
@@ -398,6 +398,20 @@ class _ImagenScreenState extends State<ImagenScreen>
                     });
                     _listen();
                   },
+            tooltip: 'Imagen',
+          ),
+        ) : Flexible(
+          child: IconButton(
+            color: Colors.white,
+            highlightColor: Colors.orange,
+            icon:  Image.asset("assets/explore.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+            onPressed:  () {
+              setState(() {
+                _aiMode = AiMode.Transform;
+              });
+              _listen();
+            },
             tooltip: 'Imagen',
           ),
         ),
@@ -558,35 +572,39 @@ class _ImagenScreenState extends State<ImagenScreen>
             });
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.Transform) {
-            //ttsHelper.speak(responseText);
-            // Generate an image from a text prompt
-            try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: getImageGenPrompt(selectedMode, responseText),
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
+            if (widget.openaiApiKey.isNotEmpty) {
+              // Generate an image from a text prompt
+              try {
+                final imageResponse = await OpenAI.instance.image.create(
+                  model: 'dall-e-3',
+                  prompt: getImageGenPrompt(selectedMode, responseText),
+                  n: 1,
+                  size: OpenAIImageSize.size1024,
+                  responseFormat: OpenAIImageResponseFormat.b64Json,
+                );
 
-              if (imageResponse.data.isNotEmpty) {
-                setState(() {
-                  Uint8List bytesImage = base64Decode(imageResponse.data.first
-                      .b64Json!); // Assuming URL points to a base64 image string
-                  decodeAndSetImage(bytesImage!);
-                });
-                ttsHelper.speak(responseText);
-              } else {
+                if (imageResponse.data.isNotEmpty) {
+                  setState(() {
+                    Uint8List bytesImage = base64Decode(imageResponse.data.first
+                        .b64Json!); // Assuming URL points to a base64 image string
+                    decodeAndSetImage(bytesImage!);
+                  });
+                  ttsHelper.speak(responseText);
+                } else {
+                  if (kDebugMode) {
+                    Log.d('No image returned from the API');
+                  }
+                  ttsHelper.speak("Failed to generate image. Try again");
+                }
+              } catch (e) {
                 if (kDebugMode) {
-                  Log.d('No image returned from the API');
+                  Log.d('Error calling OpenAI image generation API: $e');
                 }
                 ttsHelper.speak("Failed to generate image. Try again");
               }
-            } catch (e) {
-              if (kDebugMode) {
-                Log.d('Error calling OpenAI image generation API: $e');
-              }
-              ttsHelper.speak("Failed to generate image. Try again");
+            } else {
+              // Only text response
+              ttsHelper.speak(responseText);
             }
           }
         } else {
