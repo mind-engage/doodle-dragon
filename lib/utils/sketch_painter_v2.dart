@@ -43,6 +43,10 @@ class SketchPainter extends CustomPainter {
         if (point.point != null) {
           if (!pathStarted) {
             path.moveTo(point.point!.dx, point.point!.dy);
+            // Draw the point immediately
+            paint.color = point.color;
+            paint.strokeWidth = point.strokeWidth;
+            canvas.drawPoints(ui.PointMode.points, [point.point!], paint);
             pathStarted = true;
           } else {
             path.lineTo(point.point!.dx, point.point!.dy);
