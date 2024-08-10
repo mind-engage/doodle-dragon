@@ -12,6 +12,8 @@ Doodle Dragon is a Flutter application designed to spark creativity and learning
 
 <img src="docs/sketching.png" width="200" /> <img src="docs/tracing.png" width="200" /> <img src="docs/imagening.png" width="200" /> 
 
+[User Guide](./docs/UserGuide.md)
+
 ### How It Works
 
 Doodle Dragon leverages the following technologies:
@@ -46,8 +48,6 @@ The app can be customized through the settings screen:
 * **API Keys:**
     * **Gemini API Key:** Your Google Gemini API key.
     * **OpenAI API Key:** Your OpenAI API key (optional).
-
-[User Guide](./docs/UserGuide.md)
 
 ### Future Enhancements
 * **User Accounts:** Allow multiple children to save their drawings and progress.
