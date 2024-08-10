@@ -293,30 +293,41 @@ class _SketchScreenState extends State<SketchScreen> {
           onPanUpdate: (details) {
             if (_isWelcoming) _stopWelcome();
             if (_isAnalysing) _stopAnalysis();
-            setState(() {
-              RenderBox renderBox = context.findRenderObject() as RenderBox;
-              double appBarHeight =
-              150; // Update this if the AppBar height changes
-              double topPadding = MediaQuery.of(context).padding.top;
+              setState(() {
+                RenderBox renderBox = context.findRenderObject() as RenderBox;
+                double appBarHeight = 150; //AppBar().toolbarHeight!;
+                double topPadding = MediaQuery.of(context).padding.top;
 
-              Offset adjustedPosition = details.globalPosition -
-                  Offset(0, appBarHeight + topPadding);
-              Offset localPosition =
-              renderBox.globalToLocal(adjustedPosition);
+                Offset adjustedPosition = details.globalPosition -
+                    Offset(0, appBarHeight + topPadding);
+                Offset localPosition = renderBox.globalToLocal(adjustedPosition);
 
-              if (!isErasing) {
-                points.add(ColoredPoint(
-                    localPosition, selectedColor, currentStrokeWidth));
-              } else {
-                // Erasing could be refined to work with paths if necessary
-                points = points
-                    .where((p) =>
-                p.point == null ||
-                    (p.point! - localPosition).distance >
-                        20) // Adjust distance as needed
-                    .toList();
-              }
-            });
+                // Distance threshold for rejecting distant points within a path
+                const double maxDistanceThreshold = 20.0; // Adjust as needed
+
+                if (!isErasing) {
+                  // Check if starting a new path or continuing an existing one
+                  if (points.isEmpty || points.last.point == null) {
+                    // New path - add the point unconditionally
+                    points.add(ColoredPoint(
+                        localPosition, selectedColor, currentStrokeWidth));
+                  } else {
+                    // Continuing path - apply distance threshold
+                    if ((localPosition - points.last.point!).distance <=
+                        maxDistanceThreshold) {
+                      points.add(ColoredPoint(
+                          localPosition, selectedColor, currentStrokeWidth));
+                    }
+                  }
+                } else {
+                  // Erasing logic (you can keep this as is)
+                  points = points
+                      .where((p) =>
+                  p.point == null ||
+                      (p.point! - localPosition).distance > 20)
+                      .toList();
+                }
+              });
           },
           onPanEnd: (details) {
             // Add a null point to signal the end of a path
