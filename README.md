@@ -32,6 +32,10 @@ Doodle Dragon leverages the following technologies:
 5. **Configure API Keys:** You can provide the API keys through the app's settings screen once it is launched.
 6. **Run the App:** `flutter run`
 
+
+
+**Currently tested only on Android Phones and Tablets with API level 14**
+
 ### Configuration
 
 The app can be customized through the settings screen:
@@ -43,11 +47,12 @@ The app can be customized through the settings screen:
     * **Gemini API Key:** Your Google Gemini API key.
     * **OpenAI API Key:** Your OpenAI API key (optional).
 
+[User Guide](./docs/UserGuide.md)
+
 ### Future Enhancements
-* **Expanded Image Library:** Provide a wider variety of tracing images and categorize them by theme.
 * **User Accounts:** Allow multiple children to save their drawings and progress.
 * **Offline Mode:** Explore options for limited offline functionality.
 * **Text/Image to Video:** Support for Video generation prompts in addition to text/image
-* **Backend:** Backend for aggregating and sharing content
+* **Backend:** Backend for aggregating and sharing content.
 
 Let's make learning fun and creative with Doodle Dragon! 🐲
