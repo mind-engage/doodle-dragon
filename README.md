@@ -36,7 +36,7 @@ Doodle Dragon leverages the following technologies:
 
 
 
-**Currently tested only on Android Phones and Tablets with API level 14**
+**Currently tested only on Android Phones and Tablets with API level 33 and above**
 
 ### Configuration
 
