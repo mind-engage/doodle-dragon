@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/trace_image_picker.dart';
 import "../utils/user_messages.dart";
-import "../utils/sketch_painter_v2.dart";
+import "../utils/sketch_painter_v3.dart";
 import '../utils/log.dart';
 
 // Enumeration to define various AI modes for the application's functionality.
@@ -35,7 +35,8 @@ class TraceScreen extends StatefulWidget {
 // State class for TraceScreen with additional functionality from SingleTickerProviderStateMixin for animations.
 class _TraceScreenState extends State<TraceScreen>
     with SingleTickerProviderStateMixin {
-  List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
+  List<SketchPath> paths = [];
+  SketchPath? currentPath;
   bool showSketch = true;          // Flag to toggle display of the sketch.
   bool isErasing = false;          // Flag to toggle eraser mode.
 
@@ -367,46 +368,39 @@ Example of the kind of prompt you should generate: "A simple black and white out
 
                     Offset adjustedPosition = details.globalPosition -
                         Offset(0, appBarHeight + topPadding);
-                    Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                    Offset localPosition =
+                    renderBox.globalToLocal(adjustedPosition);
 
-                    // Distance threshold for rejecting distant points within a path
-                    const double maxDistanceThreshold = 20.0; // Adjust as needed
+                    const double maxDistanceThreshold = 20.0;
 
                     if (!isErasing) {
-                      // Check if starting a new path or continuing an existing one
-                      if (points.isEmpty || points.last.point == null) {
-                        // New path - add the point unconditionally
-                        points.add(ColoredPoint(
-                            localPosition, selectedColor, currentStrokeWidth));
-                      } else {
-                        // Continuing path - apply distance threshold
-                        if ((localPosition - points.last.point!).distance <=
-                            maxDistanceThreshold) {
-                          points.add(ColoredPoint(
-                              localPosition, selectedColor, currentStrokeWidth));
-                        }
+                      if (currentPath == null) {
+                        currentPath = SketchPath(selectedColor, currentStrokeWidth);
+                        paths.add(currentPath!);
+                      }
+                      if (currentPath!.points.isEmpty ||
+                          (localPosition - currentPath!.points.last).distance <=
+                              maxDistanceThreshold) {
+                        currentPath!.points.add(localPosition);
                       }
                     } else {
-                      // Erasing logic (you can keep this as is)
-                      points = points
-                          .where((p) =>
-                      p.point == null ||
-                          (p.point! - localPosition).distance > 20)
-                          .toList();
+                      paths = paths.where((path) {
+                        return !path.points.any((point) =>
+                        (point - localPosition).distance <= 20);
+                      }).toList();
                     }
                   });
                 }
               },
               onPanEnd: (details) {
                 if (generatedImage != null) {
-                  setState(() => points.add(
-                      ColoredPoint(null, selectedColor, currentStrokeWidth)));
+                  currentPath = null;
                 }
               },
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
-                  painter: SketchPainter(points, showSketch, generatedImage,
+                  painter: SketchPainter(paths, showSketch, generatedImage,
                       _transparencyLevels[_currentTransparencyLevel]),
                   child: Container(),
                 ),
@@ -603,7 +597,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
       ttsHelper.speak("Create or select a picture for tracing");
       return;
     }
-    if (points.isEmpty) {
+    if (paths.isEmpty) {
       ttsHelper.speak("Trace the picture and try again");
       return;
     }
@@ -627,7 +621,7 @@ Example of the kind of prompt you should generate: "A simple black and white out
       double width = size.width;
       double height = size.height;
 
-      ui.Image image = await drawPointsToImage(points, size);
+      ui.Image image = await drawPointsToImage(paths, size);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
@@ -844,9 +838,9 @@ Example of the kind of prompt you should generate: "A simple black and white out
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
-
+/*
   Future<ui.Image> drawPointsToImage(
-      List<ColoredPoint> points, Size size) async {
+      List<SketchPath> paths, Size size) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -869,4 +863,5 @@ Example of the kind of prompt you should generate: "A simple black and white out
     final picture = recorder.endRecording();
     return picture.toImage(size.width.toInt(), size.height.toInt());
   }
+ */
 }

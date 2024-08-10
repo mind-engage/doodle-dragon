@@ -14,7 +14,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/tts_helper.dart';
 import '../utils/user_messages.dart';
-import '../utils/sketch_painter_v2.dart';
+import '../utils/sketch_painter_v3.dart';
 import '../utils/log.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -40,7 +40,8 @@ class SketchScreen extends StatefulWidget {
 
 // Private State class handling the logic and UI of SketchScreen.
 class _SketchScreenState extends State<SketchScreen> {
-  List<ColoredPoint> points = [];  // Stores the points drawn on the canvas.
+  List<SketchPath> paths = [];
+  SketchPath? currentPath;
   bool showSketch = true;          // Flag to toggle sketch visibility.
   bool isErasing = false;          // Flag to determine if the user is erasing.
 
@@ -286,13 +287,14 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   // Build the drawing area of the application.
+  @override
   Widget buildBody() => Column(
-    children: [
-      Expanded(
-        child: GestureDetector(
-          onPanUpdate: (details) {
-            if (_isWelcoming) _stopWelcome();
-            if (_isAnalysing) _stopAnalysis();
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onPanUpdate: (details) {
+              if (_isWelcoming) _stopWelcome();
+              if (_isAnalysing) _stopAnalysis();
               setState(() {
                 RenderBox renderBox = context.findRenderObject() as RenderBox;
                 double appBarHeight = 150; //AppBar().toolbarHeight!;
@@ -300,52 +302,50 @@ class _SketchScreenState extends State<SketchScreen> {
 
                 Offset adjustedPosition = details.globalPosition -
                     Offset(0, appBarHeight + topPadding);
-                Offset localPosition = renderBox.globalToLocal(adjustedPosition);
+                Offset localPosition =
+                renderBox.globalToLocal(adjustedPosition);
 
-                // Distance threshold for rejecting distant points within a path
-                const double maxDistanceThreshold = 20.0; // Adjust as needed
+                const double maxDistanceThreshold = 20.0;
 
                 if (!isErasing) {
-                  // Check if starting a new path or continuing an existing one
-                  if (points.isEmpty || points.last.point == null) {
-                    // New path - add the point unconditionally
-                    points.add(ColoredPoint(
-                        localPosition, selectedColor, currentStrokeWidth));
-                  } else {
-                    // Continuing path - apply distance threshold
-                    if ((localPosition - points.last.point!).distance <=
-                        maxDistanceThreshold) {
-                      points.add(ColoredPoint(
-                          localPosition, selectedColor, currentStrokeWidth));
-                    }
+                  if (currentPath == null) {
+                    currentPath = SketchPath(selectedColor, currentStrokeWidth);
+                    paths.add(currentPath!);
+                  }
+                  if (currentPath!.points.isEmpty ||
+                      (localPosition - currentPath!.points.last).distance <=
+                          maxDistanceThreshold) {
+                    currentPath!.points.add(localPosition);
                   }
                 } else {
-                  // Erasing logic (you can keep this as is)
-                  points = points
-                      .where((p) =>
-                  p.point == null ||
-                      (p.point! - localPosition).distance > 20)
-                      .toList();
+                  paths = paths.where((path) {
+                    return !path.points.any((point) =>
+                    (point - localPosition).distance <= 20);
+                  }).toList();
                 }
               });
-          },
-          onPanEnd: (details) {
-            // Add a null point to signal the end of a path
-            setState(() => points.add(
-                ColoredPoint(null, selectedColor, currentStrokeWidth)));
-          },
-          child: RepaintBoundary(
-            key: repaintBoundaryKey,
-            child: CustomPaint(
-              painter: SketchPainter(points, showSketch, generatedImage,
-                  _transparencyLevels[_currentTransparencyLevel]),
-              child: Container(),
+            },
+            onPanEnd: (details) {
+              setState(() {
+                currentPath = null; // End the current path
+              });
+            },
+            child: RepaintBoundary(
+              key: repaintBoundaryKey, // Keep your existing key
+              child: CustomPaint(
+                painter: SketchPainter(
+                    paths,
+                    showSketch, // Assuming you still use this variable
+                    generatedImage,
+                    _transparencyLevels[_currentTransparencyLevel]),
+                child: Container(),
+              ),
             ),
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+
 
   // Build the control panel for portrait orientation.
   Widget controlPanelPortrait() {
