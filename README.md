@@ -12,7 +12,11 @@ Doodle Dragon is a Flutter application designed to spark creativity and learning
 
 <img src="docs/sketching.png" width="200" /> <img src="docs/tracing.png" width="200" /> <img src="docs/imagening.png" width="200" /> 
 
-[User Guide](./docs/UserGuide.md)
+### How to Use Doodle Dragon
+[The user guide will walk you through all UI feature](./docs/UserGuide.md)
+
+### Watch Doodle Dragon in Action
+[Watch the Demo Video Now](https://youtu.be/PIbCCbIpTz8)
 
 ### How It Works
 
