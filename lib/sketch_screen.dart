@@ -18,9 +18,8 @@ import '../utils/sketch_painter_v3.dart';
 import '../utils/log.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-// Define an enumeration for different AI modes available in the app.
-enum AiMode { Analysis, SketchToImage }
+import "ai_prompts/sketch_prompts.dart";
+import 'utils/child_skill_levels.dart';
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
@@ -72,35 +71,15 @@ class _SketchScreenState extends State<SketchScreen> {
   TtsHelper ttsHelper = TtsHelper(); // Text-to-speech helper instance.
 
   // Generate appropriate prompts based on the current AI mode.
-  String getPrompt(AiMode mode) {
-    // Method to generate interaction prompts based on the selected AI mode.
-    String historyContext = chatHistory.join(" ");
-    switch (mode) {
-      case AiMode.Analysis:
-        historyContext = _buildHistoryContext();
-        // Condition to tailor the prompt if the last interaction was from AI.
-        if (chatHistory.isNotEmpty &&
-            chatHistory.last['sender'] == 'AI' &&
-            chatHistory.last['type'] == 'text') {
-          return "$historyContext Did the child follow any of the suggestions from the previous drawing? If so, say to him few encouraging words to the child. Also provide some new suggestions based on this latest drawing. Only child's latest drawing is provided to you. You have to provide your feedback based on this drawing and attached history";
-        } else {
-          return "Describe this children's drawing in detail, imagining you are talking to a $learnerAge old child. Focus on the elements, colors (or lack thereof), and any potential story the drawing might tell. Then, offer a couple of specific, positive suggestions on how they could add even more to their amazing artwork!";
-        }
-      case AiMode.SketchToImage:
-        return "Imagine you're telling a magical art fairy how to make a super cool picture from this drawing."
-            "The picture for a $learnerAge old child."
-            "Describe what you see: What colors should it use? Are there any shiny objects? Is it a happy picture or maybe a bit spooky? Be as creative as you can!";
-      default:
-        return ""; // Handle any other cases or throw an error if needed
-    }
+  String getPrompt(AiMode mode, String skillsSummary) {
+    return SketchPrompts.getPrompt(mode, learnerAge, chatHistory, skillsSummary);
   }
 
   // Update the chat history with new entries.
-  void updateChatHistory(String content, String sender, [String type = 'text']) {
+  void updateChatHistory(String content, String sender) {
     chatHistory.add({
       'content': content,
-      'sender': sender,
-      'type': type // 'text' or 'image'
+      'sender': sender
     });
     if (chatHistory.length >
         20) { // Limit the history size to prevent overly long prompts
@@ -108,25 +87,12 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
-  // Build a context string from the chat history for AI interactions.
-  String _buildHistoryContext() {
-    String context = "";
-    for (var message in chatHistory) {
-      if (message['type'] == 'image') {
-        context += "User drew a picture. ";
-      } else {
-        context += "${message['sender']}: ${message['content']} ";
-      }
-    }
-    return context;
-  }
-
   // Generate a message to the user based on the AI mode.
   String getMessageToUser(AiMode mode) {
     switch (mode) {
-      case AiMode.Analysis:
+      case AiMode.analysis:
         return "$learnerName, I am looking at your drawing. Please wait";
-      case AiMode.SketchToImage:
+      case AiMode.sketchToImage:
         return "$learnerName, I will convert your sketch to an image. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
@@ -222,7 +188,7 @@ class _SketchScreenState extends State<SketchScreen> {
                     color: Colors.white,
                     highlightColor: Colors.orange,
                     onPressed: () {
-                      takeSnapshotAndAnalyze(context, AiMode.SketchToImage);
+                      takeSnapshotAndAnalyze(context, AiMode.sketchToImage);
                     },
                     tooltip: 'Sketch to Picture',
                   ),
@@ -433,7 +399,7 @@ class _SketchScreenState extends State<SketchScreen> {
             color: Colors.white,
             highlightColor: Colors.orange,
             onPressed: () {
-              takeSnapshotAndAnalyze(context, AiMode.Analysis);
+              takeSnapshotAndAnalyze(context, AiMode.analysis);
             },
             tooltip: 'Feedback',
           ),
@@ -588,18 +554,33 @@ class _SketchScreenState extends State<SketchScreen> {
 
       String base64String = base64Encode(pngBytes);
 
-      String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
-      String jsonBody = jsonEncode({
-        "contents": [
-          {
+      // String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
+      String skillsSummary = getSkillsTextPlain(learnerAge); // Get skills summary
+      String promptText = getPrompt(selectedMode, skillsSummary);
+      List<Map<String, dynamic>> contentParts = [];
+
+      if(selectedMode == AiMode.analysis) {
+        for (var message in chatHistory) {
+          contentParts.add({
+            "role": message['sender'],
             "parts": [
-              {"text": promptText},
-              {
-                "inlineData": {"mimeType": "image/png", "data": base64String}
-              }
+              {"text": message['content']}
             ]
+          });
+        }
+      }
+      contentParts.add({
+        "role": "user",
+        "parts": [
+          {"text": promptText},
+          {
+            "inlineData": {"mimeType": "image/png", "data": base64String}
           }
         ]
+      });
+
+      String jsonBody = jsonEncode({
+        "contents": contentParts,
       });
 
       var response = await http.post(
@@ -615,11 +596,11 @@ class _SketchScreenState extends State<SketchScreen> {
         if (isContentSafe(candidate)) {
           String responseText = candidate['content']['parts'][0]['text'];
           Log.d("Response from model: $responseText");
-          if (selectedMode == AiMode.Analysis) {
-            updateChatHistory('', 'User', 'image');
-            updateChatHistory(responseText, 'AI');
+          if (selectedMode == AiMode.analysis) {
+            updateChatHistory('User drew a picture', 'user');
+            updateChatHistory(responseText, 'model');
             _analysisMessage(responseText);
-          } else if (selectedMode == AiMode.SketchToImage) {
+          } else if (selectedMode == AiMode.sketchToImage) {
             // Generate an image from a text prompt
             try {
               final imageResponse = await OpenAI.instance.image.create(

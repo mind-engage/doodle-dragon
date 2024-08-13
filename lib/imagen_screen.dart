@@ -26,9 +26,8 @@ import '../utils/log.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-
-// Enumeration to define various AI modes for the application's functionality.
-enum AiMode { Story, Transform, Poetry, PromptToImage }
+import 'ai_prompts/imagen_prompts.dart';
+import 'utils/child_skill_levels.dart';
 
 // StatefulWidget to handle the Imagen Screen UI and functionality.
 class ImagenScreen extends StatefulWidget {
@@ -62,7 +61,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   String _sttText = "";                                       // Text obtained from speech recognition.
   OverlayEntry? _overlayEntry;                                // Overlay entry for displaying speech text.
 
-  AiMode _aiMode = AiMode.PromptToImage;                      // Default AI mode for operations.
+  AiMode _aiMode = AiMode.promptToImage;                      // Default AI mode for operations.
 
   late SharedPreferences prefs;                               // Shared preferences for storing data locally.
   String learnerName = "John";                                // Default learner name.
@@ -78,46 +77,26 @@ class _ImagenScreenState extends State<ImagenScreen>
 
   // Define prompts for different AI modes based on the scenario and user interaction.
   String getVlmPrompt(AiMode mode) {
-    switch (mode) {
-      case AiMode.Story:
-        return "Tell me a short, engaging story, suitable for a $learnerAge year old, based on the image. I want the story to be fun and maybe a little silly!";
-      case AiMode.Poetry:
-        return "Take a look at this wonderful image  $learnerAge year old wants to learn about! Let's write a poem together, just like they might write it, about what we see in the picture. "
-            ""
-            "Use fun words and rhymes that a $learnerAge year old would love!";
-      case AiMode.Transform:
-        return "You are a storyteller and an artist. "
-            "Based on this image and the idea  $_sttText, tell me a short, engaging story suitable for a $learnerAge year old. I want the story to be fun and maybe a little silly!";
-
-      case AiMode.PromptToImage:
-        return "You are an AI agent helping a $learnerAge year old child to generate a creative and detailed prompt to be passed to text to image generation model."
-            "Elaborate on the following topic given by tge child: $_sttText. Generate a detailed prompt to create the image";
-      default:
-        return "";
-    }
+    String skillsSummary = getSkillsTextPlain(learnerAge);
+    return ImagenPrompts.getVlmPrompt(mode, learnerAge, _sttText, skillsSummary);
   }
 
   // Generate prompts for image creation based on VLM (Visual Language Model) responses.
   String getImageGenPrompt(AiMode mode, String vlmResponse) {
-    switch (mode) {
-      case AiMode.Transform:
-        return "Generate a kid friendly drawing for $learnerAge old child, for the following story line: $vlmResponse. "
-            "Make the drawing in the style of a children's book illustration, with bright colors";
-      default:
-        return "";
-    }
+    String skillsSummary = getSkillsTextPlain(learnerAge);
+    return ImagenPrompts.getImageGenPrompt(mode, learnerAge, vlmResponse, skillsSummary);
   }
 
   // Return waiting messages to the user based on the current AI mode.
   String getWaitMessageToUser(AiMode mode) {
     switch (mode) {
-      case AiMode.Story:
+      case AiMode.story:
         return "I am creating a story for you. Please wait";
-      case AiMode.Poetry:
+      case AiMode.poetry:
         return "I am making a poem for you. Please wait";
-      case AiMode.Transform:
+      case AiMode.transform:
         return "I am transforming the image. Please wait";
-      case AiMode.PromptToImage:
+      case AiMode.promptToImage:
         return "Generating the picture. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
@@ -127,9 +106,9 @@ class _ImagenScreenState extends State<ImagenScreen>
   // Return specific messages for voice prompting based on AI mode.
   String getMessageForVoicePrompting(AiMode mode) {
     switch (mode) {
-      case AiMode.Transform:
+      case AiMode.transform:
         return "Tell me what to explore";
-      case AiMode.PromptToImage:
+      case AiMode.promptToImage:
         return "Tell me about your imagination?";
       default:
         return ""; // Handle any other cases or throw an error if needed
@@ -398,13 +377,13 @@ class _ImagenScreenState extends State<ImagenScreen>
             onPressed: generatedImage == null
                 ? () {
                     setState(() {
-                      _aiMode = AiMode.PromptToImage;
+                      _aiMode = AiMode.promptToImage;
                     });
                     _listen();
                   }
                 : () {
                     setState(() {
-                      _aiMode = AiMode.Transform;
+                      _aiMode = AiMode.transform;
                     });
                     _listen();
                   },
@@ -418,7 +397,7 @@ class _ImagenScreenState extends State<ImagenScreen>
                 width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             onPressed:  () {
               setState(() {
-                _aiMode = AiMode.Transform;
+                _aiMode = AiMode.transform;
               });
               _listen();
             },
@@ -433,7 +412,7 @@ class _ImagenScreenState extends State<ImagenScreen>
             highlightColor: Colors.orange,
             onPressed: generatedImage != null
                 ? () {
-                    takeSnapshotAndAnalyze(context, AiMode.Story);
+                    takeSnapshotAndAnalyze(context, AiMode.story);
                   }
                 : _msgSGeneratePicture,
             tooltip: 'Tell Story',
@@ -447,7 +426,7 @@ class _ImagenScreenState extends State<ImagenScreen>
             highlightColor: Colors.orange,
             onPressed: generatedImage != null
                 ? () {
-                    takeSnapshotAndAnalyze(context, AiMode.Poetry);
+                    takeSnapshotAndAnalyze(context, AiMode.poetry);
                   }
                 : _msgSGeneratePicture,
             tooltip: 'Tell a Poem',
@@ -574,17 +553,17 @@ class _ImagenScreenState extends State<ImagenScreen>
           if (kDebugMode) {
             Log.d("Response from Gemini: $responseText");
           }
-          if (selectedMode == AiMode.Story) {
+          if (selectedMode == AiMode.story) {
             setState(() {
               generatedStory = responseText;
             });
             ttsHelper.speak(responseText);
-          } else if (selectedMode == AiMode.Poetry) {
+          } else if (selectedMode == AiMode.poetry) {
             setState(() {
               generatedPoem = responseText;
             });
             ttsHelper.speak(responseText);
-          } else if (selectedMode == AiMode.Transform) {
+          } else if (selectedMode == AiMode.transform) {
             if (widget.openaiApiKey.isNotEmpty) {
               // Generate an image from a text prompt
               try {
@@ -846,9 +825,9 @@ class _ImagenScreenState extends State<ImagenScreen>
       _speechToText.stop();
       _removeOverlay();
       if (_sttText.isNotEmpty) {
-        if (_aiMode == AiMode.PromptToImage) {
-          generatePicture(context, AiMode.PromptToImage);
-        } else if (_aiMode == AiMode.Transform) {
+        if (_aiMode == AiMode.promptToImage) {
+          generatePicture(context, AiMode.promptToImage);
+        } else if (_aiMode == AiMode.transform) {
           takeSnapshotAndAnalyze(context, _aiMode);
         }
       }
