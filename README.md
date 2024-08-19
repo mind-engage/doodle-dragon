@@ -8,9 +8,6 @@ Doodle Dragon is a Flutter application designed to spark creativity and learning
 * **Tracing:**  Choose from a library of age-appropriate images or let the app generate one from a spoken description!  Doodle Dragon provides helpful feedback on tracing accuracy to encourage improvement.
 * **Imagening:** Turn drawings into interactive adventures! Doodle Dragon generates stories, poems, and even transforms images based on spoken prompts.
 
-### Screenshots
-
-<img src="docs/sketching.png" width="200" /> <img src="docs/tracing.png" width="200" /> <img src="docs/imagening.png" width="200" /> 
 
 ### How to Use Doodle Dragon
 [The user guide will walk you through all UI feature](./docs/UserGuide.md)
