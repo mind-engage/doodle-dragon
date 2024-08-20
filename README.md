@@ -32,7 +32,7 @@ Doodle Dragon leverages the following technologies:
     * (Optional) Get an OpenAI API key for expanded image generation features.
 3. **Clone the Repository:**  `git clone https://github.com/your-username/doodle-dragon.git`
 4. **Install Dependencies:** `flutter pub get`
-5. **Configure API Keys:** You can provide the API keys through the app's settings screen once it is launched.
+5. **Configure API Keys:** Create a dotenv file from dotenv.template and fill the keys.
 6. **Run the App:** `flutter run`
 
 
