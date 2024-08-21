@@ -20,17 +20,14 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import "ai_prompts/sketch_prompts.dart";
 import 'utils/child_skill_levels.dart';
+import 'utils/api_key_manager.dart';
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
-  final String geminiApiKey;
-  final String openaiApiKey;
 
   // Constructor for the SketchScreen which takes required API keys.
   const SketchScreen({
-    super.key,
-    required this.geminiApiKey,
-    required this.openaiApiKey
+    super.key
   });
 
   @override
@@ -39,6 +36,10 @@ class SketchScreen extends StatefulWidget {
 
 // Private State class handling the logic and UI of SketchScreen.
 class _SketchScreenState extends State<SketchScreen> {
+  late String geminiApiKey;
+  late String openaiApiKey;
+  bool _isOpenaiAvailble = false;
+
   List<SketchPath> paths = [];
   SketchPath? currentPath;
   bool showSketch = true;          // Flag to toggle sketch visibility.
@@ -103,11 +104,22 @@ class _SketchScreenState extends State<SketchScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeKeys();
     loadSettings();
-    OpenAI.apiKey = widget.openaiApiKey; // Set OpenAI API key from widget property.
+    //OpenAI.apiKey = widget.openaiApiKey; // Set OpenAI API key from widget property.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _welcomeMessage(); // Display a welcome message after the frame build is complete.
     });
+  }
+
+  Future<void> _initializeKeys() async {
+    final apiKeyManager = await APIKeyManager.getInstance();
+    setState(() {
+      geminiApiKey = apiKeyManager.geminiApiKey;
+      openaiApiKey = apiKeyManager.openaiApiKey;
+    });
+    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
   // Dispose of resources when the widget is removed from the tree.
@@ -181,7 +193,7 @@ class _SketchScreenState extends State<SketchScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                widget.openaiApiKey.isNotEmpty ?  Flexible(
+                _isOpenaiAvailble ?  Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/sketch_to_image.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -585,7 +597,7 @@ class _SketchScreenState extends State<SketchScreen> {
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -629,6 +641,9 @@ class _SketchScreenState extends State<SketchScreen> {
           Log.d("Content is not safe for children.");
           ttsHelper.speak("Sorry, content issue. Try again");
         }
+      } else if (response.statusCode == 403) {
+        Log.d("Failed to get response: ${response.body}");
+        ttsHelper.speak("Sorry, network issue. Check Gemini API Key");
       } else {
         Log.d("Failed to get response: ${response.body}");
         ttsHelper.speak("Sorry, network issue. Try again");

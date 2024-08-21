@@ -7,13 +7,20 @@ import 'sketch_screen.dart';
 import 'trace_screen.dart';
 import 'imagen_screen.dart';
 import 'settings_screen.dart';
+import '../utils/log.dart';
 
 // Main entry point of the Flutter application.
 Future main() async {
   // Ensure that Flutter widgets are bound to the framework before executing any other operations.
   WidgetsFlutterBinding.ensureInitialized();
   // Load environment variables from the .env file.
-  await dotenv.load(fileName: "dotenv");
+  // Attempt to load environment variables from the .env file if it exists.
+  try {
+    await dotenv.load(fileName: "dotenv");
+  } catch (e) {
+    // Handle the case where the .env file doesn't exist or other errors occur.
+    Log.d("Failed to load .env file: $e");
+  }
   // Lock orientation to portrait mode.
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -25,18 +32,14 @@ Future main() async {
 
 // Stateless widget for the main application.
 class DoodleDragon extends StatelessWidget {
-  final String geminiApiKey;
-  final String openaiApiKey;
-
   // Constructor requiring API keys.
-  DoodleDragon({required this.geminiApiKey, required this.openaiApiKey});
+  DoodleDragon();
 
   // Factory method to asynchronously fetch API keys from SharedPreferences or .env file before building the widget.
   static Future<DoodleDragon> initialize() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String geminiApiKey = dotenv.get('GEMINI_API_KEY', fallback: prefs.getString('GEMINI_API_KEY') ?? '');
-    String openaiApiKey = dotenv.get('OPENAI_API_KEY', fallback: prefs.getString('OPENAI_API_KEY') ?? '');
-    return DoodleDragon(geminiApiKey: geminiApiKey, openaiApiKey: openaiApiKey);
+
+    return DoodleDragon();
   }
 
   // Build the MaterialApp with the specified theme and home screen.
@@ -48,18 +51,15 @@ class DoodleDragon extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         fontFamily: 'ComicSansMS',
       ),
-      home: HomeScreen(geminiApiKey: geminiApiKey, openaiApiKey: openaiApiKey),
+      home: HomeScreen(),
     );
   }
 }
 
 // Stateful widget for the home screen.
 class HomeScreen extends StatefulWidget {
-  final String geminiApiKey;
-  final String openaiApiKey;
-
   // Constructor requiring API keys.
-  HomeScreen({required this.geminiApiKey, required this.openaiApiKey});
+  HomeScreen();
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -120,13 +120,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
               SizedBox(height: 40),
               _buildElevatedButton('Start Sketching!', 'assets/pencil_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => SketchScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
+                  context, MaterialPageRoute(builder: (context) => SketchScreen()))),
               SizedBox(height: 20),
               _buildElevatedButton('Start Tracing!', 'assets/trace_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => TraceScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
+                  context, MaterialPageRoute(builder: (context) => TraceScreen()))),
               SizedBox(height: 20),
               _buildElevatedButton('Start Imagen!', 'assets/imagen_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => ImagenScreen(geminiApiKey: widget.geminiApiKey, openaiApiKey: widget.openaiApiKey)))),
+                  context, MaterialPageRoute(builder: (context) => ImagenScreen()))),
             ],
           ),
         ),

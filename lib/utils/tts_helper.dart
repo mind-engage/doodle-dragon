@@ -18,6 +18,7 @@ class TtsHelper {
 
   Future<void> speak(String text) async {
     if (text.isNotEmpty) {
+      await flutterTts.stop();
       var completion = Completer<void>();
       flutterTts.setCompletionHandler(() {
         completion.complete();

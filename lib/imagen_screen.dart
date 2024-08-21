@@ -28,13 +28,12 @@ import 'package:android_intent_plus/flag.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'ai_prompts/imagen_prompts.dart';
 import 'utils/child_skill_levels.dart';
+import 'utils/api_key_manager.dart';
 
 // StatefulWidget to handle the Imagen Screen UI and functionality.
 class ImagenScreen extends StatefulWidget {
-  final String geminiApiKey;  // API key for Gemini service.
-  final String openaiApiKey;  // API key for OpenAI service.
   const ImagenScreen(
-      {super.key, required this.geminiApiKey, required this.openaiApiKey});
+      {super.key});
 
   @override
   _ImagenScreenState createState() => _ImagenScreenState();
@@ -42,6 +41,11 @@ class ImagenScreen extends StatefulWidget {
 
 class _ImagenScreenState extends State<ImagenScreen>
     with SingleTickerProviderStateMixin {
+
+  late String geminiApiKey;
+  late String openaiApiKey;
+  bool _isOpenaiAvailble = false;
+
   List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
   bool showSketch = true;          // Flag to toggle display of the sketch.
   bool isErasing = false;          // Flag to toggle eraser mode.
@@ -119,8 +123,9 @@ class _ImagenScreenState extends State<ImagenScreen>
   @override
   void initState() {
     super.initState();
+    _initializeKeys();
     loadSettings();
-    OpenAI.apiKey = widget.openaiApiKey;
+    //OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
     _initAnimation();
   }
@@ -136,6 +141,16 @@ class _ImagenScreenState extends State<ImagenScreen>
 
     _removeOverlay();
     super.dispose();
+  }
+
+  Future<void> _initializeKeys() async {
+    final apiKeyManager = await APIKeyManager.getInstance();
+    setState(() {
+      geminiApiKey = apiKeyManager.geminiApiKey;
+      openaiApiKey = apiKeyManager.openaiApiKey;
+    });
+    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
   // Load settings from shared preferences and welcome the user.
@@ -365,7 +380,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        widget.openaiApiKey.isNotEmpty ? Flexible(
+        _isOpenaiAvailble ? Flexible(
           child: IconButton(
             color: Colors.white,
             highlightColor: Colors.orange,
@@ -540,7 +555,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -564,7 +579,7 @@ class _ImagenScreenState extends State<ImagenScreen>
             });
             ttsHelper.speak(responseText);
           } else if (selectedMode == AiMode.transform) {
-            if (widget.openaiApiKey.isNotEmpty) {
+            if (_isOpenaiAvailble) {
               // Generate an image from a text prompt
               try {
                 final imageResponse = await OpenAI.instance.image.create(
@@ -646,7 +661,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );

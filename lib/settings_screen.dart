@@ -5,6 +5,9 @@ import 'utils/child_skill_levels.dart';
 
 // Define a StatefulWidget to handle the settings screen of the app
 class SettingsScreen extends StatefulWidget {
+
+  SettingsScreen();
+
   @override
   _SettingsScreenState createState() => _SettingsScreenState();
 }

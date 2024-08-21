@@ -19,16 +19,16 @@ import "../utils/sketch_painter_v3.dart";
 import '../utils/log.dart';
 import "../ai_prompts/trace_prompts.dart";
 import 'utils/child_skill_levels.dart';
+import 'utils/api_key_manager.dart';
 
 // Enumeration to define various AI modes for the application's functionality.
 
 
 // StatefulWidget to handle the Trace Screen UI and functionality.
 class TraceScreen extends StatefulWidget {
-  final String geminiApiKey;
-  final String openaiApiKey;
+
   const TraceScreen(
-      {super.key, required this.geminiApiKey, required this.openaiApiKey});
+      {super.key});
 
   @override
   _TraceScreenState createState() => _TraceScreenState();
@@ -37,6 +37,11 @@ class TraceScreen extends StatefulWidget {
 // State class for TraceScreen with additional functionality from SingleTickerProviderStateMixin for animations.
 class _TraceScreenState extends State<TraceScreen>
     with SingleTickerProviderStateMixin {
+
+  late String geminiApiKey;
+  late String openaiApiKey;
+  bool _isOpenaiAvailble = false;
+
   List<SketchPath> paths = [];
   SketchPath? currentPath;
   bool showSketch = true;          // Flag to toggle display of the sketch.
@@ -111,8 +116,9 @@ class _TraceScreenState extends State<TraceScreen>
   @override
   void initState() {
     super.initState();
+    _initializeKeys();
     loadSettings();
-    OpenAI.apiKey = widget.openaiApiKey;
+    // OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
     _initAnimation();
   }
@@ -127,6 +133,16 @@ class _TraceScreenState extends State<TraceScreen>
     _removeOverlay();
     ttsHelper.stop();
     super.dispose();
+  }
+
+  Future<void> _initializeKeys() async {
+    final apiKeyManager = await APIKeyManager.getInstance();
+    setState(() {
+      geminiApiKey = apiKeyManager.geminiApiKey;
+      openaiApiKey = apiKeyManager.openaiApiKey;
+    });
+    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
   // Load settings from shared preferences and welcome the user.
@@ -224,7 +240,7 @@ class _TraceScreenState extends State<TraceScreen>
                     tooltip: 'Load Image',
                   ),
                 ),
-                widget.openaiApiKey.isNotEmpty ? Flexible(
+                _isOpenaiAvailble ? Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/imagen_square.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
@@ -606,7 +622,7 @@ class _TraceScreenState extends State<TraceScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -663,7 +679,7 @@ class _TraceScreenState extends State<TraceScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${widget.geminiApiKey}'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
