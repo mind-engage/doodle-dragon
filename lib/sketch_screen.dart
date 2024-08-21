@@ -39,6 +39,7 @@ class _SketchScreenState extends State<SketchScreen> {
   late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
+  late String geminiEndpoint;
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
@@ -117,6 +118,7 @@ class _SketchScreenState extends State<SketchScreen> {
     setState(() {
       geminiApiKey = apiKeyManager.geminiApiKey;
       openaiApiKey = apiKeyManager.openaiApiKey;
+      geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
     OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
@@ -597,7 +599,7 @@ class _SketchScreenState extends State<SketchScreen> {
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
+            '$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );

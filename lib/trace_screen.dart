@@ -41,6 +41,7 @@ class _TraceScreenState extends State<TraceScreen>
   late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
+  late String geminiEndpoint;
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
@@ -140,6 +141,7 @@ class _TraceScreenState extends State<TraceScreen>
     setState(() {
       geminiApiKey = apiKeyManager.geminiApiKey;
       openaiApiKey = apiKeyManager.openaiApiKey;
+      geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
     OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
@@ -622,7 +624,7 @@ class _TraceScreenState extends State<TraceScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
+          '$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -679,7 +681,7 @@ class _TraceScreenState extends State<TraceScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
+            '$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );

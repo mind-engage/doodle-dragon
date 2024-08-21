@@ -5,6 +5,7 @@ class APIKeyManager {
   static APIKeyManager? _instance;
   late String geminiApiKey;
   late String openaiApiKey;
+  final String geminiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';  // Static endpoint for Gemini API
 
   APIKeyManager._({required this.geminiApiKey, required this.openaiApiKey});
 

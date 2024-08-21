@@ -45,6 +45,7 @@ class _ImagenScreenState extends State<ImagenScreen>
   late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
+  late String geminiEndpoint;
 
   List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
   bool showSketch = true;          // Flag to toggle display of the sketch.
@@ -148,6 +149,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     setState(() {
       geminiApiKey = apiKeyManager.geminiApiKey;
       openaiApiKey = apiKeyManager.openaiApiKey;
+      geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
     OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
@@ -555,7 +557,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
+            '$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -661,7 +663,7 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       var response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=$geminiApiKey'),
+            '$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
