@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'utils/child_skill_levels.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Define a StatefulWidget to handle the settings screen of the app
 class SettingsScreen extends StatefulWidget {
@@ -134,7 +135,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       ],
     );
   }
-  // Widget to build API keys settings tab
+
+  Future<void> _launchUrl(String url) async {
+    if (!await launchUrl(Uri.parse(url))) {
+      throw 'Could not launch $url';
+    }
+  }
+
+// Widget to build API keys settings tab
   Widget buildApiKeysSettings() {
     return ListView(
       children: [
@@ -152,6 +160,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           ),
         ),
         ListTile(
+          leading: Icon(Icons.link, color: Colors.blue),
+          title: Text('Get Gemini API Key', style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
+          onTap: () => _launchUrl('https://ai.google.dev/aistudio'),
+        ),
+        Divider(color: Colors.grey[300], thickness: 3, height: 30),  // Adding a divider with spacing
+        ListTile(
           title: Text('OpenAI API Key', style: TextStyle(color: Color(0xFF330066))),
           subtitle: TextField(
             decoration: InputDecoration(
@@ -163,6 +177,11 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               saveSettings('OPENAI_API_KEY', value);
             },
           ),
+        ),
+        ListTile(
+          leading: Icon(Icons.link, color: Colors.blue),
+          title: Text('Get OpenAI API Key', style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
+          onTap: () => _launchUrl('https://openai.com/index/openai-api/'),
         ),
       ],
     );
