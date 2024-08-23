@@ -93,9 +93,9 @@ class _SketchScreenState extends State<SketchScreen> {
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.analysis:
-        return "$learnerName, I am looking at your drawing. Please wait";
+        return "$learnerName I am looking at your drawing. Please wait";
       case AiMode.sketchToImage:
-        return "$learnerName, I will convert your sketch to an image. Please wait";
+        return "$learnerName I will convert your sketch to an image. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }

@@ -10,7 +10,7 @@ class SketchPrompts {
       case AiMode.analysis:
         if (chatHistory.isNotEmpty) {
           return "$ageContext\n\n"
-              "Analyze this drawing considering the child's developmental stage. If  the child tried any of the suggestions, give appreciation. "
+              "Analyze this drawing considering the child's developmental stage. Also loot at the history for your earlier responses. If the child tried any of your suggestions, give appreciation and build new response based on the previous responses. "
               "Give them some encouragement and new ideas! Remember, you're only looking at their latest drawing. "
               "Offer specific feedback and suggestions in a conversational and encouraging tone, as if you were speaking directly to the child. ";
         } else {

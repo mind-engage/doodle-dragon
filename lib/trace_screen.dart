@@ -92,9 +92,9 @@ class _TraceScreenState extends State<TraceScreen>
   String getMessageToUser(AiMode mode) {
     switch (mode) {
       case AiMode.analysis:
-        return "$learnerName, I am looking at your tracing. Please wait";
+        return "$learnerName I am looking at your tracing. Please wait";
       case AiMode.promptToImage:
-        return "$learnerName, Generating the picture. Please wait";
+        return "$learnerName Generating the picture. Please wait";
       default:
         return ""; // Handle any other cases or throw an error if needed
     }
