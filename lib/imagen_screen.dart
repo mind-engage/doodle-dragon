@@ -82,13 +82,13 @@ class _ImagenScreenState extends State<ImagenScreen>
 
   // Define prompts for different AI modes based on the scenario and user interaction.
   String getVlmPrompt(AiMode mode) {
-    String skillsSummary = getSkillsTextPlain(learnerAge);
+    String skillsSummary = getSkillsTextForPrompt(learnerAge);
     return ImagenPrompts.getVlmPrompt(mode, learnerAge, _sttText, skillsSummary);
   }
 
   // Generate prompts for image creation based on VLM (Visual Language Model) responses.
   String getImageGenPrompt(AiMode mode, String vlmResponse) {
-    String skillsSummary = getSkillsTextPlain(learnerAge);
+    String skillsSummary = getSkillsTextForPrompt(learnerAge);
     return ImagenPrompts.getImageGenPrompt(mode, learnerAge, vlmResponse, skillsSummary);
   }
 

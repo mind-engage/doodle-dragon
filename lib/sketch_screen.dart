@@ -569,7 +569,7 @@ class _SketchScreenState extends State<SketchScreen> {
       String base64String = base64Encode(pngBytes);
 
       // String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
-      String skillsSummary = getSkillsTextPlain(learnerAge); // Get skills summary
+      String skillsSummary = getSkillsTextForPrompt(learnerAge); // Get skills summary
       String promptText = getPrompt(selectedMode, skillsSummary);
       List<Map<String, dynamic>> contentParts = [];
 
@@ -603,7 +603,8 @@ class _SketchScreenState extends State<SketchScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
-
+      Log.d("History: $chatHistory");
+      Log.d("Prompt: $promptText");
       if (response.statusCode == 200) {
         Map<String, dynamic> decodedResponse = jsonDecode(response.body);
         Map<String, dynamic> candidate = decodedResponse['candidates'][0];

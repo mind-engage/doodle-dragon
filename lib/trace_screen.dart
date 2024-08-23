@@ -84,7 +84,7 @@ class _TraceScreenState extends State<TraceScreen>
 
   // Function to get prompt based on AI mode and user input.
   String getPrompt(AiMode mode, String userInput) {
-    String skillsSummary = getSkillsTextPlain(learnerAge);
+    String skillsSummary = getSkillsTextForPrompt(learnerAge);
     return TracePrompts.getPrompt(mode, userInput, learnerAge, skillsSummary);
   }
 

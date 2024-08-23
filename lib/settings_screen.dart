@@ -38,7 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {
       learnerName = prefs.getString('learnerName') ?? "";
       learnerAge = prefs.getInt('learnerAge') ?? 3;
-      skillsText = getSkillsText(learnerAge);
+      skillsText = getSkillsTextForUI(learnerAge);
       geminiApiKey = prefs.getString('GEMINI_API_KEY') ?? "";
       openaiApiKey = prefs.getString('OPENAI_API_KEY') ?? "";
       _isLoading = false;
@@ -113,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             onChanged: (double value) {
               setState(() {
                 learnerAge = value.toInt();
-                skillsText = getSkillsText(learnerAge);
+                skillsText = getSkillsTextForUI(learnerAge);
               });
               saveSettings('learnerAge', learnerAge);
             },
