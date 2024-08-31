@@ -4,9 +4,18 @@ import 'package:flutter/material.dart';
 class SketchPath {
   final Color color;
   final double strokeWidth;
-  final List<Offset> points = [];
+  List<Offset> points = [];
 
-  SketchPath(this.color, this.strokeWidth);
+  // Constructor with optional points argument
+  SketchPath(this.color, this.strokeWidth, {List<Offset>? points})
+      : this.points = points ?? [];
+
+
+  // Clone method to create a deep copy of the instance
+  SketchPath.clone(SketchPath path)
+      : color = path.color,
+        strokeWidth = path.strokeWidth,
+        points = List<Offset>.from(path.points); // Make a deep copy of the points
 }
 
 class SketchPainter extends CustomPainter {

@@ -48,6 +48,11 @@ class _TraceScreenState extends State<TraceScreen>
   bool showSketch = true;          // Flag to toggle display of the sketch.
   bool isErasing = false;          // Flag to toggle eraser mode.
 
+  List<SketchPath> animatedPaths = []; // For animation
+  bool _isAnimating = false;
+  Timer? _timer;
+
+
   GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
   bool isLoading = false;                      // Flag to show a loading indicator.
   final double canvasWidth = 1024;             // Canvas width.
@@ -204,6 +209,53 @@ class _TraceScreenState extends State<TraceScreen>
     }
   }
 
+  void toggleAnimation() {
+    if (_isAnimating) {
+      stopAnimation();
+    } else {
+      startAnimation();
+    }
+  }
+
+  void startAnimation() {
+    const duration = Duration(milliseconds: 10); // Control the speed of animation
+    _timer?.cancel();
+
+    // Clear existing animated paths and prepare for new animation
+    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    int _pathIndex = 0;
+    int _pointIndex = 0;
+
+
+    // Start a periodic timer to animate the sketch
+    _timer = Timer.periodic(duration, (timer) {
+      if (_pathIndex < paths.length) {
+        if (_pointIndex < paths[_pathIndex].points.length) {
+          setState(() {
+            // Add point by point to the corresponding path in animatedPaths
+            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
+          });
+          _pointIndex++;
+        } else {
+          // Move to the next path once all points of the current path are drawn
+          _pathIndex++;
+          _pointIndex = 0;
+        }
+      } else {
+        // Stop the animation once all paths are completely drawn
+        stopAnimation();
+      }
+    });
+    _isAnimating = true;
+  }
+
+  void stopAnimation() {
+    _timer?.cancel();
+    setState(() {
+      _isAnimating = false;
+    });
+  }
+
   // Build the main UI for the trace screen.
   @override
   Widget build(BuildContext context) {
@@ -280,6 +332,13 @@ class _TraceScreenState extends State<TraceScreen>
                     highlightColor: Colors.orange,
                     onPressed: shareCanvas,
                     tooltip: 'Share Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
+                    onPressed: toggleAnimation,
+                    tooltip: _isAnimating ? 'Pause Animation' : 'Start Animation',
                   ),
                 ),
               ],
@@ -368,7 +427,8 @@ class _TraceScreenState extends State<TraceScreen>
               child: RepaintBoundary(
                 key: repaintBoundaryKey,
                 child: CustomPaint(
-                  painter: SketchPainter(paths, showSketch, generatedImage,
+                  painter: SketchPainter(
+                      _isAnimating ? animatedPaths : paths, showSketch, generatedImage,
                       _transparencyLevels[_currentTransparencyLevel]),
                   child: Container(),
                 ),

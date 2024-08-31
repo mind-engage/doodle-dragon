@@ -46,6 +46,10 @@ class _SketchScreenState extends State<SketchScreen> {
   bool showSketch = true;          // Flag to toggle sketch visibility.
   bool isErasing = false;          // Flag to determine if the user is erasing.
 
+  List<SketchPath> animatedPaths = []; // For animation
+  bool _isAnimating = false;
+  Timer? _timer;
+
   GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
   bool isLoading = false;                      // Flag to show a loading indicator when processing.
   final double canvasWidth = 1024;             // Define canvas width.
@@ -170,6 +174,53 @@ class _SketchScreenState extends State<SketchScreen> {
     if (_isWelcoming) _stopWelcome();
   }
 
+
+  void toggleAnimation() {
+    if (_isAnimating) {
+      stopAnimation();
+    } else {
+      startAnimation();
+    }
+  }
+
+  void startAnimation() {
+    const duration = Duration(milliseconds: 10); // Control the speed of animation
+    _timer?.cancel();
+
+    // Clear existing animated paths and prepare for new animation
+    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    int _pathIndex = 0;
+    int _pointIndex = 0;
+
+    // Start a periodic timer to animate the sketch
+    _timer = Timer.periodic(duration, (timer) {
+      if (_pathIndex < paths.length) {
+        if (_pointIndex < paths[_pathIndex].points.length) {
+          setState(() {
+            // Add point by point to the corresponding path in animatedPaths
+            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
+          });
+          _pointIndex++;
+        } else {
+          // Move to the next path once all points of the current path are drawn
+          _pathIndex++;
+          _pointIndex = 0;
+        }
+      } else {
+        // Stop the animation once all paths are completely drawn
+        stopAnimation();
+      }
+    });
+    _isAnimating = true;
+  }
+
+  void stopAnimation() {
+    _timer?.cancel();
+    setState(() {
+      _isAnimating = false;
+    });
+  }
+
   // Build the main UI for the sketch screen.
   @override
   Widget build(BuildContext context) {
@@ -240,6 +291,13 @@ class _SketchScreenState extends State<SketchScreen> {
                     color: Colors.white,
                     highlightColor: Colors.orange,
                     tooltip: 'Share Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
+                    onPressed: toggleAnimation,
+                    tooltip: _isAnimating ? 'Pause Animation' : 'Start Animation',
                   ),
                 ),
               ],
@@ -314,8 +372,8 @@ class _SketchScreenState extends State<SketchScreen> {
               key: repaintBoundaryKey, // Keep your existing key
               child: CustomPaint(
                 painter: SketchPainter(
-                    paths,
-                    showSketch, // Assuming you still use this variable
+                    _isAnimating ? animatedPaths : paths,  // Use animatedPaths during animation
+                    showSketch,
                     generatedImage,
                     _transparencyLevels[_currentTransparencyLevel]),
                 child: Container(),
