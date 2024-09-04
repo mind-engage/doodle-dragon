@@ -2,7 +2,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +20,7 @@ import 'package:permission_handler/permission_handler.dart';
 import "ai_prompts/sketch_prompts.dart";
 import 'utils/child_skill_levels.dart';
 import 'utils/api_key_manager.dart';
+import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
@@ -50,10 +50,16 @@ class _SketchScreenState extends State<SketchScreen> {
   bool _isAnimating = false;
   Timer? _timer;
 
+
+  bool _isRecording = false;
+  int _pathIndex = 0;
+  int _pointIndex = 0;
+  final int pointsPerFrame = 5;
+
   GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
   bool isLoading = false;                      // Flag to show a loading indicator when processing.
-  final double canvasWidth = 1024;             // Define canvas width.
-  final double canvasHeight = 1920;            // Define canvas height.
+  final double encodeWidth = 1080;             // Define canvas width.
+  final double encodeHeight = 1920;            // Define canvas height.
   ui.Image? generatedImage;                    // Store generated image from AI analysis.
   final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];  // Transparency levels for UI components.
   final int _currentTransparencyLevel = 3;                         // Current transparency level index.
@@ -221,6 +227,133 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
+
+  void startRecording() async {
+    if (!context.mounted) return;
+    showLoadingDialog(context, "Saving Video...");
+
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+        .findRenderObject() as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+
+    // Initialize the video encoder with desired settings
+    await FlutterQuickVideoEncoder.setup(
+      width: encodeWidth.toInt(),//image.width,
+      height: encodeHeight.toInt(),//image.height,
+      filepath: '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      fps: 30, // Frame rate of the video
+      videoBitrate: 1000000,
+      profileLevel:  ProfileLevel.any,
+      audioBitrate: 0,
+      audioChannels: 0,
+      sampleRate: 0,
+    );
+
+    setState(() {
+      _isRecording = true;
+    });
+
+    // Start capturing frames
+    frameByFrameCapture();
+  }
+
+
+  Future<void> saveVideoToGallery(String videoPath) async {
+    if (!context.mounted) return;
+    // For legacy mode
+    await requestPermissions();
+
+    try {
+      // Save video to gallery
+      await ImageGallerySaver.saveFile(videoPath);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image saved successfully')),
+      );
+    } catch (e) {
+      // You can handle errors internally or rethrow them to be caught by catchError where this function is called
+      Log.d("Error saving image: $e"); // Rethrow the error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save Image')),
+      );
+    }
+  }
+  void stopRecording() async {
+    if (!context.mounted || !_isRecording) return;
+    await FlutterQuickVideoEncoder.finish();
+    // Finalize the video encoding
+    String outputPath =  FlutterQuickVideoEncoder.filepath;
+
+    saveVideoToGallery(outputPath);
+    Navigator.of(context).pop();  // Close the loading dialog
+
+    setState(() {
+      _isRecording = false;
+    });
+  }
+
+  void frameByFrameCapture() async {
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+
+    while (_isRecording && _pathIndex < paths.length) {
+      for (int i = 0; i < pointsPerFrame; ++i) {
+        if (_pointIndex < paths[_pathIndex].points.length) {
+          setState(() {
+            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
+            _pointIndex++;
+          });
+        } else {
+          _pathIndex++;
+          _pointIndex = 0;
+          if (_pathIndex >= paths.length) {
+            break;
+          }
+        }
+      }
+      await captureCurrentFrame(boundary);
+    }
+    if (_pathIndex >= paths.length) {
+      stopRecording(); // Automatically stop when finished
+    }
+  }
+
+  Future<void> captureCurrentFrame(RenderRepaintBoundary boundary) async {
+    if (!_isRecording) return;
+
+    // Capture the original image
+    ui.Image originalImage = await boundary.toImage(pixelRatio: 3.0);
+
+    // Prepare to draw the original image onto a scaled canvas
+    ui.PictureRecorder recorder = ui.PictureRecorder();
+    ui.Canvas canvas = ui.Canvas(recorder);
+
+    // Define the destination size (1920x1080)
+    final int destWidth = encodeWidth.toInt();
+    final int destHeight = encodeHeight.toInt();
+
+    // Calculate the scaling factors
+    double scaleX = destWidth / originalImage.width;
+    double scaleY = destHeight / originalImage.height;
+    double scale = scaleX < scaleY ? scaleX : scaleY; // Choose the smaller scaling factor to maintain aspect ratio without cropping
+
+    // Calculate the centering offset to maintain aspect ratio
+    double offsetX = (destWidth - originalImage.width * scale) / 2;
+    double offsetY = (destHeight - originalImage.height * scale) / 2;
+
+    // Apply scale and offset transformations
+    canvas.scale(scale, scale);
+    canvas.drawImage(originalImage, ui.Offset(offsetX / scale, offsetY / scale), ui.Paint());
+
+    // Finish drawing and produce the scaled image
+    ui.Image scaledImage = await recorder.endRecording().toImage(destWidth, destHeight);
+
+    // Convert the scaled image to byte data in RGBA format
+    ByteData? byteData = await scaledImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+    Uint8List frameData = byteData!.buffer.asUint8List();
+
+    // Append the captured frame data to the video encoder
+    await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
+  }
   // Build the main UI for the sketch screen.
   @override
   Widget build(BuildContext context) {
@@ -304,6 +437,18 @@ class _SketchScreenState extends State<SketchScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.videocam),
+            onPressed: () {
+              if (!_isRecording) {
+                startRecording();
+              } else {
+                stopRecording();
+              }
+            },
+          )
+        ],
       ),
       body: Row(
         // Use Row for main layout
@@ -372,7 +517,7 @@ class _SketchScreenState extends State<SketchScreen> {
               key: repaintBoundaryKey, // Keep your existing key
               child: CustomPaint(
                 painter: SketchPainter(
-                    _isAnimating ? animatedPaths : paths,  // Use animatedPaths during animation
+                    _isAnimating || _isRecording ? animatedPaths : paths,  // Use animatedPaths during animation
                     showSketch,
                     generatedImage,
                     _transparencyLevels[_currentTransparencyLevel]),
@@ -518,6 +663,28 @@ class _SketchScreenState extends State<SketchScreen> {
     }
   }
 
+  void showLoadingDialog(BuildContext context, String loadingMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,  // User must not dismiss the dialog by tapping outside of it
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                Text(loadingMessage),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Request necessary permissions for storage.
   Future<void> requestPermissions() async {
     var status = await Permission.storage.status;
@@ -535,7 +702,7 @@ class _SketchScreenState extends State<SketchScreen> {
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
 
       ByteData? byteData =
-      await image!.toByteData(format: ui.ImageByteFormat.png);
+      await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final result = await ImageGallerySaver.saveImage(pngBytes,
@@ -551,30 +718,13 @@ class _SketchScreenState extends State<SketchScreen> {
 
   // Method to save the canvas image and manage UI feedback.
   void _saveCanvas() async {
-    // First, request permissions
+    // First, request permissions to support legacy modes
     await requestPermissions();
 
     // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible:
-      false, // User must not dismiss the dialog by tapping outside of it
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Container(
-            padding: EdgeInsets.all(20),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 20),
-                Text("Saving image..."),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    if (!context.mounted) return;
+    showLoadingDialog(context, "Saving image...");
+
 
     // Then try to save the image
     saveImage().then((success) {
@@ -617,12 +767,6 @@ class _SketchScreenState extends State<SketchScreen> {
       ByteData? byteData =
       await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
-
-      // String base64String = await capturePng();
-      // Get the size of the boundary to pass to getPrompt
-      Size size = boundary.size;
-      double width = size.width;
-      double height = size.height;
 
       String base64String = base64Encode(pngBytes);
 
