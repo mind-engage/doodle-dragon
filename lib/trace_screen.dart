@@ -20,8 +20,9 @@ import '../utils/log.dart';
 import "../ai_prompts/trace_prompts.dart";
 import 'utils/child_skill_levels.dart';
 import 'utils/api_key_manager.dart';
-
-// Enumeration to define various AI modes for the application's functionality.
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 
 
 // StatefulWidget to handle the Trace Screen UI and functionality.
@@ -52,6 +53,10 @@ class _TraceScreenState extends State<TraceScreen>
   bool _isAnimating = false;
   Timer? _timer;
 
+  bool _isRecording = false;
+  final int pointsPerFrame = 5;
+  final double encodeWidth = 1080;             // Define encode width.
+  final double encodeHeight = 1920;            // Define encode height.
 
   GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
   bool isLoading = false;                      // Flag to show a loading indicator.
@@ -223,23 +228,23 @@ class _TraceScreenState extends State<TraceScreen>
 
     // Clear existing animated paths and prepare for new animation
     animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
-    int _pathIndex = 0;
-    int _pointIndex = 0;
+    int pathIndex = 0;
+    int pointIndex = 0;
 
 
     // Start a periodic timer to animate the sketch
     _timer = Timer.periodic(duration, (timer) {
-      if (_pathIndex < paths.length) {
-        if (_pointIndex < paths[_pathIndex].points.length) {
+      if (pathIndex < paths.length) {
+        if (pointIndex < paths[pathIndex].points.length) {
           setState(() {
             // Add point by point to the corresponding path in animatedPaths
-            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
+            animatedPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
           });
-          _pointIndex++;
+          pointIndex++;
         } else {
           // Move to the next path once all points of the current path are drawn
-          _pathIndex++;
-          _pointIndex = 0;
+          pathIndex++;
+          pointIndex = 0;
         }
       } else {
         // Stop the animation once all paths are completely drawn
@@ -254,6 +259,101 @@ class _TraceScreenState extends State<TraceScreen>
     setState(() {
       _isAnimating = false;
     });
+  }
+
+  void startRecording() async {
+    if (!context.mounted) return;
+    showLoadingDialog(context, "Saving Video...");
+
+    // Initialize the video encoder with desired settings
+    await FlutterQuickVideoEncoder.setup(
+      width: encodeWidth.toInt(),//image.width,
+      height: encodeHeight.toInt(),//image.height,
+      filepath: '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      fps: 30, // Frame rate of the video
+      videoBitrate: 1000000,
+      profileLevel:  ProfileLevel.any,
+      audioBitrate: 0,
+      audioChannels: 0,
+      sampleRate: 0,
+    );
+
+    setState(() {
+      _isRecording = true;
+    });
+
+    // Start capturing frames
+    frameByFrameCapture();
+  }
+
+  // Request necessary permissions for storage.
+  Future<void> requestPermissions() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
+    }
+  }
+
+  Future<void> saveVideoToGallery(String videoPath) async {
+    if (!context.mounted) return;
+    // For legacy mode
+    await requestPermissions();
+
+    try {
+      // Save video to gallery
+      await ImageGallerySaver.saveFile(videoPath);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Image saved successfully')),
+      );
+    } catch (e) {
+      // You can handle errors internally or rethrow them to be caught by catchError where this function is called
+      Log.d("Error saving image: $e"); // Rethrow the error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save Image')),
+      );
+    }
+  }
+  void stopRecording() async {
+    if (!context.mounted || !_isRecording) return;
+    await FlutterQuickVideoEncoder.finish();
+    // Finalize the video encoding
+    String outputPath =  FlutterQuickVideoEncoder.filepath;
+
+    saveVideoToGallery(outputPath);
+    Navigator.of(context).pop();  // Close the loading dialog
+
+    setState(() {
+      _isRecording = false;
+    });
+  }
+
+  void frameByFrameCapture() async {
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    List<SketchPath> recordPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+
+    int pathIndex = 0;
+    int pointIndex = 0;
+
+    while (_isRecording && pathIndex < paths.length) {
+      for (int i = 0; i < pointsPerFrame; ++i) {
+        if (pointIndex < paths[pathIndex].points.length) {
+          recordPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
+          pointIndex++;
+
+        } else {
+          pathIndex++;
+          pointIndex = 0;
+          if (pathIndex >= paths.length) {
+            break;
+          }
+        }
+      }
+      Uint8List frameData = await generateFrame(recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
+      await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
+    }
+    if (pathIndex >= paths.length) {
+      stopRecording(); // Automatically stop when finished
+    }
   }
 
   // Build the main UI for the trace screen.
@@ -335,10 +435,32 @@ class _TraceScreenState extends State<TraceScreen>
                   ),
                 ),
                 Flexible(
-                  child: IconButton(
-                    icon: Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
-                    onPressed: toggleAnimation,
-                    tooltip: _isAnimating ? 'Pause Animation' : 'Start Animation',
+                  child: PopupMenuButton<String>(
+                    icon: Image.asset("assets/delete.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onSelected: handleMenuItemClick,  // Handling the menu item selection
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'animate',
+                        child: Row(
+                          children: <Widget>[
+                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
+                            SizedBox(width: 10),  // Space between icon and text
+                            Text('Animate'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'record',
+                        child: Row(
+                          children: <Widget>[
+                            Icon(Icons.videocam),
+                            SizedBox(width: 10),
+                            Text('Record'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -379,6 +501,27 @@ class _TraceScreenState extends State<TraceScreen>
             )
           : null,
     );
+  }
+
+  void handleMenuItemClick(String value) {
+    Log.d("Selected: $value");
+    // Execute different actions based on the value selected
+    switch (value) {
+      case 'animate':
+        toggleAnimation();
+        Log.d('Animation');
+        // Navigate to the profile page or show profile info
+        break;
+      case 'record':
+        if (!_isRecording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
+        Log.d('Record');
+        // Open settings dialog or navigate to settings page
+        break;
+    }
   }
 
   Widget buildBody() => Column(
@@ -866,30 +1009,26 @@ class _TraceScreenState extends State<TraceScreen>
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
-/*
-  Future<ui.Image> drawPointsToImage(
-      List<SketchPath> paths, Size size) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
 
-    // Draw the white background
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = Colors.white);
-
-    // Your painting logic
-    final paint = Paint()
-      ..color = Colors.black
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
-
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i].point != null && points[i + 1].point != null) {
-        canvas.drawLine(points[i].point!, points[i + 1].point!, paint);
-      }
-    }
-
-    final picture = recorder.endRecording();
-    return picture.toImage(size.width.toInt(), size.height.toInt());
+  void showLoadingDialog(BuildContext context, String loadingMessage) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,  // User must not dismiss the dialog by tapping outside of it
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                Text(loadingMessage),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
- */
 }

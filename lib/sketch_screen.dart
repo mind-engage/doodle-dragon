@@ -56,8 +56,8 @@ class _SketchScreenState extends State<SketchScreen> {
 
   GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
   bool isLoading = false;                      // Flag to show a loading indicator when processing.
-  final double encodeWidth = 1080;             // Define canvas width.
-  final double encodeHeight = 1920;            // Define canvas height.
+  final double encodeWidth = 1080;             // Define encode width.
+  final double encodeHeight = 1920;            // Define encode height.
   ui.Image? generatedImage;                    // Store generated image from AI analysis.
   final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];  // Transparency levels for UI components.
   final int _currentTransparencyLevel = 3;                         // Current transparency level index.
@@ -229,10 +229,6 @@ class _SketchScreenState extends State<SketchScreen> {
   void startRecording() async {
     if (!context.mounted) return;
     showLoadingDialog(context, "Saving Video...");
-
-    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
-        .findRenderObject() as RenderRepaintBoundary;
-    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
 
     // Initialize the video encoder with desired settings
     await FlutterQuickVideoEncoder.setup(
@@ -452,7 +448,7 @@ class _SketchScreenState extends State<SketchScreen> {
             if (!_isRecording) {
               startRecording();
             } else {
-            stopRecording();
+              stopRecording();
             }
         Log.d('Record');
         // Open settings dialog or navigate to settings page
