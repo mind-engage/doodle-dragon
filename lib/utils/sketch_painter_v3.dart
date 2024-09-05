@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 
 class SketchPath {
   final Color color;
@@ -96,4 +97,37 @@ Future<ui.Image> drawPointsToImage(List<SketchPath> paths, Size size) async {
   }
   final picture = recorder.endRecording();
   return picture.toImage(size.width.toInt(), size.height.toInt());
+}
+
+Future<Uint8List> generateFrame(List<SketchPath> recordPaths, Size imgSize, Size encSize) async {
+  ui.Image originalImage = await drawPointsToImage(recordPaths, imgSize);
+  // Prepare to draw the original image onto a scaled canvas
+  ui.PictureRecorder recorder = ui.PictureRecorder();
+  ui.Canvas canvas = ui.Canvas(recorder);
+
+  // Define the destination size (1920x1080)
+  final int destWidth = encSize.width.toInt();
+  final int destHeight = encSize.height.toInt();
+
+  // Calculate the scaling factors
+  double scaleX = destWidth / originalImage.width;
+  double scaleY = destHeight / originalImage.height;
+  double scale = scaleX < scaleY ? scaleX : scaleY; // Choose the smaller scaling factor to maintain aspect ratio without cropping
+
+  // Calculate the centering offset to maintain aspect ratio
+  double offsetX = (destWidth - originalImage.width * scale) / 2;
+  double offsetY = (destHeight - originalImage.height * scale) / 2;
+
+  // Apply scale and offset transformations
+  canvas.scale(scale, scale);
+  canvas.drawImage(originalImage, ui.Offset(offsetX / scale, offsetY / scale), ui.Paint());
+
+  // Finish drawing and produce the scaled image
+  ui.Image scaledImage = await recorder.endRecording().toImage(destWidth, destHeight);
+
+  // Convert the scaled image to byte data in RGBA format
+  ByteData? byteData = await scaledImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+  Uint8List frameData = byteData!.buffer.asUint8List();
+
+  return frameData;
 }

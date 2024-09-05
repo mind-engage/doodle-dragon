@@ -52,8 +52,6 @@ class _SketchScreenState extends State<SketchScreen> {
 
 
   bool _isRecording = false;
-  int _pathIndex = 0;
-  int _pointIndex = 0;
   final int pointsPerFrame = 5;
 
   GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
@@ -195,22 +193,22 @@ class _SketchScreenState extends State<SketchScreen> {
 
     // Clear existing animated paths and prepare for new animation
     animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
-    int _pathIndex = 0;
-    int _pointIndex = 0;
+    int pathIndex = 0;
+    int pointIndex = 0;
 
     // Start a periodic timer to animate the sketch
     _timer = Timer.periodic(duration, (timer) {
-      if (_pathIndex < paths.length) {
-        if (_pointIndex < paths[_pathIndex].points.length) {
+      if (pathIndex < paths.length) {
+        if (pointIndex < paths[pathIndex].points.length) {
           setState(() {
             // Add point by point to the corresponding path in animatedPaths
-            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
+            animatedPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
           });
-          _pointIndex++;
+          pointIndex++;
         } else {
           // Move to the next path once all points of the current path are drawn
-          _pathIndex++;
-          _pointIndex = 0;
+          pathIndex++;
+          pointIndex = 0;
         }
       } else {
         // Stop the animation once all paths are completely drawn
@@ -293,67 +291,34 @@ class _SketchScreenState extends State<SketchScreen> {
 
   void frameByFrameCapture() async {
     RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    List<SketchPath> recordPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
 
-    while (_isRecording && _pathIndex < paths.length) {
+    int pathIndex = 0;
+    int pointIndex = 0;
+
+    while (_isRecording && pathIndex < paths.length) {
       for (int i = 0; i < pointsPerFrame; ++i) {
-        if (_pointIndex < paths[_pathIndex].points.length) {
-          setState(() {
-            animatedPaths[_pathIndex].points.add(paths[_pathIndex].points[_pointIndex]);
-            _pointIndex++;
-          });
+        if (pointIndex < paths[pathIndex].points.length) {
+          recordPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
+            pointIndex++;
+
         } else {
-          _pathIndex++;
-          _pointIndex = 0;
-          if (_pathIndex >= paths.length) {
+          pathIndex++;
+          pointIndex = 0;
+          if (pathIndex >= paths.length) {
             break;
           }
         }
       }
-      await captureCurrentFrame(boundary);
+      Uint8List frameData = await generateFrame(recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
+      await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
     }
-    if (_pathIndex >= paths.length) {
+    if (pathIndex >= paths.length) {
       stopRecording(); // Automatically stop when finished
     }
   }
 
-  Future<void> captureCurrentFrame(RenderRepaintBoundary boundary) async {
-    if (!_isRecording) return;
 
-    // Capture the original image
-    ui.Image originalImage = await boundary.toImage(pixelRatio: 3.0);
-
-    // Prepare to draw the original image onto a scaled canvas
-    ui.PictureRecorder recorder = ui.PictureRecorder();
-    ui.Canvas canvas = ui.Canvas(recorder);
-
-    // Define the destination size (1920x1080)
-    final int destWidth = encodeWidth.toInt();
-    final int destHeight = encodeHeight.toInt();
-
-    // Calculate the scaling factors
-    double scaleX = destWidth / originalImage.width;
-    double scaleY = destHeight / originalImage.height;
-    double scale = scaleX < scaleY ? scaleX : scaleY; // Choose the smaller scaling factor to maintain aspect ratio without cropping
-
-    // Calculate the centering offset to maintain aspect ratio
-    double offsetX = (destWidth - originalImage.width * scale) / 2;
-    double offsetY = (destHeight - originalImage.height * scale) / 2;
-
-    // Apply scale and offset transformations
-    canvas.scale(scale, scale);
-    canvas.drawImage(originalImage, ui.Offset(offsetX / scale, offsetY / scale), ui.Paint());
-
-    // Finish drawing and produce the scaled image
-    ui.Image scaledImage = await recorder.endRecording().toImage(destWidth, destHeight);
-
-    // Convert the scaled image to byte data in RGBA format
-    ByteData? byteData = await scaledImage.toByteData(format: ui.ImageByteFormat.rawRgba);
-    Uint8List frameData = byteData!.buffer.asUint8List();
-
-    // Append the captured frame data to the video encoder
-    await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
-  }
   // Build the main UI for the sketch screen.
   @override
   Widget build(BuildContext context) {
@@ -393,21 +358,6 @@ class _SketchScreenState extends State<SketchScreen> {
                 ) : Container(),
                 Flexible(
                   child: IconButton(
-                    icon: Image.asset("assets/delete.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    onPressed: () {
-                      setState(() {
-                        showSketch = true;
-                        generatedImage = null;
-                      });
-                    },
-                    tooltip: 'Clear Sketch',
-                  ),
-                ),
-                Flexible(
-                  child: IconButton(
                     color: Colors.white,
                     highlightColor: Colors.orange,
                     icon: Image.asset("assets/save.png",
@@ -427,28 +377,48 @@ class _SketchScreenState extends State<SketchScreen> {
                   ),
                 ),
                 Flexible(
-                  child: IconButton(
-                    icon: Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
-                    onPressed: toggleAnimation,
-                    tooltip: _isAnimating ? 'Pause Animation' : 'Start Animation',
+                  child: PopupMenuButton<String>(
+                    icon: Image.asset("assets/delete.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onSelected: handleMenuItemClick,  // Handling the menu item selection
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'animate',
+                        child: Row(
+                          children: <Widget>[
+                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
+                            SizedBox(width: 10),  // Space between icon and text
+                            Text('Animate'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'record',
+                        child: Row(
+                          children: <Widget>[
+                            Icon(Icons.videocam),
+                            SizedBox(width: 10),
+                            Text('Record'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'delImage',
+                        child: Row(
+                          children: <Widget>[
+                            Icon(Icons.exit_to_app, color: Colors.black),
+                            SizedBox(width: 10),
+                            Text('Delete Image'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.videocam),
-            onPressed: () {
-              if (!_isRecording) {
-                startRecording();
-              } else {
-                stopRecording();
-              }
-            },
-          )
-        ],
       ),
       body: Row(
         // Use Row for main layout
@@ -469,6 +439,34 @@ class _SketchScreenState extends State<SketchScreen> {
     );
   }
 
+  void handleMenuItemClick(String value) {
+    Log.d("Selected: $value");
+    // Execute different actions based on the value selected
+    switch (value) {
+      case 'animate':
+        toggleAnimation();
+        Log.d('Animation');
+        // Navigate to the profile page or show profile info
+        break;
+      case 'record':
+            if (!_isRecording) {
+              startRecording();
+            } else {
+            stopRecording();
+            }
+        Log.d('Record');
+        // Open settings dialog or navigate to settings page
+        break;
+      case 'delImage':
+        setState(() {
+          showSketch = true;
+          generatedImage = null;
+        });
+        Log.d('Logging out');
+        // Handle user logout
+        break;
+    }
+  }
   // Build the drawing area of the application.
   @override
   Widget buildBody() => Column(
@@ -517,7 +515,7 @@ class _SketchScreenState extends State<SketchScreen> {
               key: repaintBoundaryKey, // Keep your existing key
               child: CustomPaint(
                 painter: SketchPainter(
-                    _isAnimating || _isRecording ? animatedPaths : paths,  // Use animatedPaths during animation
+                    _isAnimating  ? animatedPaths : paths,  // Use animatedPaths during animation
                     showSketch,
                     generatedImage,
                     _transparencyLevels[_currentTransparencyLevel]),
