@@ -11,9 +11,10 @@ class TtsHelper {
 
   void initialize() {
     flutterTts.setLanguage("en-US");
-    flutterTts.setPitch(1.0);  // Higher pitch often perceived as friendlier
-    flutterTts.setSpeechRate(0.4);  // Slower rate for better comprehension
-    flutterTts.awaitSpeakCompletion(true);  // Wait for spoken feedback to complete
+    flutterTts.setPitch(1.0); // Higher pitch often perceived as friendlier
+    flutterTts.setSpeechRate(0.4); // Slower rate for better comprehension
+    flutterTts
+        .awaitSpeakCompletion(true); // Wait for spoken feedback to complete
   }
 
   Future<void> speak(String text) async {
@@ -30,5 +31,9 @@ class TtsHelper {
 
   void stop() {
     flutterTts.stop();
+  }
+
+  Future<void> astop() async {
+    await flutterTts.stop();
   }
 }

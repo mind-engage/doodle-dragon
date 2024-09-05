@@ -32,8 +32,7 @@ import 'utils/api_key_manager.dart';
 
 // StatefulWidget to handle the Imagen Screen UI and functionality.
 class ImagenScreen extends StatefulWidget {
-  const ImagenScreen(
-      {super.key});
+  const ImagenScreen({super.key});
 
   @override
   _ImagenScreenState createState() => _ImagenScreenState();
@@ -41,55 +40,59 @@ class ImagenScreen extends StatefulWidget {
 
 class _ImagenScreenState extends State<ImagenScreen>
     with SingleTickerProviderStateMixin {
-
   late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
   late String geminiEndpoint;
 
-  List<ColoredPoint> points = [];  // List to hold the points drawn on canvas.
-  bool showSketch = true;          // Flag to toggle display of the sketch.
-  bool isErasing = false;          // Flag to toggle eraser mode.
+  List<ColoredPoint> points = []; // List to hold the points drawn on canvas.
+  bool showSketch = true; // Flag to toggle display of the sketch.
+  bool isErasing = false; // Flag to toggle eraser mode.
 
-  GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
-  bool isLoading = false;                      // Flag to show a loading indicator.
-  ui.Image? generatedImage;                    // Variable to hold the generated image.
-  String generatedStory = "";                  // Story generated from the image.
-  String generatedPoem = "";                   // Poem generated from the image.
+  GlobalKey repaintBoundaryKey =
+      GlobalKey(); // Key for the widget used to capture image.
+  bool isLoading = false; // Flag to show a loading indicator.
+  ui.Image? generatedImage; // Variable to hold the generated image.
+  String generatedStory = ""; // Story generated from the image.
+  String generatedPoem = ""; // Poem generated from the image.
 
-  double iconWidth = 80;  // Icon width for buttons.
+  double iconWidth = 80; // Icon width for buttons.
   double iconHeight = 80; // Icon height for buttons.
 
-  final stt.SpeechToText _speechToText = stt.SpeechToText();  // Speech to text instance.
-  bool _isListening = false;                                  // Flag to check if listening.
-  bool _speechEnabled = false;                                // Flag to check if speech is enabled.
-  String _sttText = "";                                       // Text obtained from speech recognition.
-  OverlayEntry? _overlayEntry;                                // Overlay entry for displaying speech text.
+  final stt.SpeechToText _speechToText =
+      stt.SpeechToText(); // Speech to text instance.
+  bool _isListening = false; // Flag to check if listening.
+  bool _speechEnabled = false; // Flag to check if speech is enabled.
+  String _sttText = ""; // Text obtained from speech recognition.
+  OverlayEntry? _overlayEntry; // Overlay entry for displaying speech text.
 
-  AiMode _aiMode = AiMode.promptToImage;                      // Default AI mode for operations.
+  AiMode _aiMode = AiMode.promptToImage; // Default AI mode for operations.
 
-  late SharedPreferences prefs;                               // Shared preferences for storing data locally.
-  String learnerName = "John";                                // Default learner name.
-  int learnerAge = 3;                                         // Default learner age, used in prompts.
-  bool _isWelcoming = false;                                  // Flag to check if welcome message is active.
+  late SharedPreferences prefs; // Shared preferences for storing data locally.
+  String learnerName = "John"; // Default learner name.
+  int learnerAge = 3; // Default learner age, used in prompts.
+  bool _isWelcoming = false; // Flag to check if welcome message is active.
 
-  TtsHelper ttsHelper = TtsHelper();                          // Text to speech helper instance.
-  late AnimationController _animationController;              // Controller for animations.
-  late Animation<double> _animation;                          // Animation details.
-  Color selectedColor = Colors.black;                         // Default selected color for drawing.
-  double currentStrokeWidth = 5.0;                            // Current stroke width for drawing.
-  bool enablePictureZone = false;                             // Flag to enable interaction with the picture zone.
+  TtsHelper ttsHelper = TtsHelper(); // Text to speech helper instance.
+  late AnimationController _animationController; // Controller for animations.
+  late Animation<double> _animation; // Animation details.
+  Color selectedColor = Colors.black; // Default selected color for drawing.
+  double currentStrokeWidth = 5.0; // Current stroke width for drawing.
+  bool enablePictureZone =
+      false; // Flag to enable interaction with the picture zone.
 
   // Define prompts for different AI modes based on the scenario and user interaction.
   String getVlmPrompt(AiMode mode) {
     String skillsSummary = getSkillsTextForPrompt(learnerAge);
-    return ImagenPrompts.getVlmPrompt(mode, learnerAge, _sttText, skillsSummary);
+    return ImagenPrompts.getVlmPrompt(
+        mode, learnerAge, _sttText, skillsSummary);
   }
 
   // Generate prompts for image creation based on VLM (Visual Language Model) responses.
   String getImageGenPrompt(AiMode mode, String vlmResponse) {
     String skillsSummary = getSkillsTextForPrompt(learnerAge);
-    return ImagenPrompts.getImageGenPrompt(mode, learnerAge, vlmResponse, skillsSummary);
+    return ImagenPrompts.getImageGenPrompt(
+        mode, learnerAge, vlmResponse, skillsSummary);
   }
 
   // Return waiting messages to the user based on the current AI mode.
@@ -151,7 +154,7 @@ class _ImagenScreenState extends State<ImagenScreen>
       openaiApiKey = apiKeyManager.openaiApiKey;
       geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
-    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
@@ -170,9 +173,9 @@ class _ImagenScreenState extends State<ImagenScreen>
     ttsHelper.speak(userMessageImagenScreen);
   }
 
-  void _stopWelcome() {
+  Future<void> _stopWelcome() async {
     _isWelcoming = false;
-    ttsHelper.stop();
+    await ttsHelper.astop();
   }
 
   void _msgSGeneratePicture() {
@@ -214,6 +217,9 @@ class _ImagenScreenState extends State<ImagenScreen>
   }
 
   void _openCamera() async {
+    ttsHelper.stop();
+    _abortListening();
+
     final image = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CameraCapture()),
@@ -382,45 +388,51 @@ class _ImagenScreenState extends State<ImagenScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _isOpenaiAvailble ? Flexible(
-          child: IconButton(
-            color: Colors.white,
-            highlightColor: Colors.orange,
-            icon: generatedImage == null
-                ? Image.asset("assets/imagen_square.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
-                : Image.asset("assets/explore.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed: generatedImage == null
-                ? () {
-                    setState(() {
-                      _aiMode = AiMode.promptToImage;
-                    });
-                    _listen();
-                  }
-                : () {
+        _isOpenaiAvailble
+            ? Flexible(
+                child: IconButton(
+                  color: Colors.white,
+                  highlightColor: Colors.orange,
+                  icon: generatedImage == null
+                      ? Image.asset("assets/imagen_square.png",
+                          width: iconWidth,
+                          height: iconHeight,
+                          fit: BoxFit.fill)
+                      : Image.asset("assets/explore.png",
+                          width: iconWidth,
+                          height: iconHeight,
+                          fit: BoxFit.fill),
+                  onPressed: generatedImage == null
+                      ? () {
+                          setState(() {
+                            _aiMode = AiMode.promptToImage;
+                          });
+                          _listen();
+                        }
+                      : () {
+                          setState(() {
+                            _aiMode = AiMode.transform;
+                          });
+                          _listen();
+                        },
+                  tooltip: 'Imagen',
+                ),
+              )
+            : Flexible(
+                child: IconButton(
+                  color: Colors.white,
+                  highlightColor: Colors.orange,
+                  icon: Image.asset("assets/explore.png",
+                      width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                  onPressed: () {
                     setState(() {
                       _aiMode = AiMode.transform;
                     });
                     _listen();
                   },
-            tooltip: 'Imagen',
-          ),
-        ) : Flexible(
-          child: IconButton(
-            color: Colors.white,
-            highlightColor: Colors.orange,
-            icon:  Image.asset("assets/explore.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-            onPressed:  () {
-              setState(() {
-                _aiMode = AiMode.transform;
-              });
-              _listen();
-            },
-            tooltip: 'Imagen',
-          ),
-        ),
+                  tooltip: 'Imagen',
+                ),
+              ),
         Flexible(
           child: IconButton(
             icon: Image.asset("assets/story.png",
@@ -556,8 +568,7 @@ class _ImagenScreenState extends State<ImagenScreen>
       });
 
       var response = await http.post(
-        Uri.parse(
-            '$geminiEndpoint?key=$geminiApiKey'),
+        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -662,8 +673,7 @@ class _ImagenScreenState extends State<ImagenScreen>
       });
 
       var response = await http.post(
-        Uri.parse(
-            '$geminiEndpoint?key=$geminiApiKey'),
+        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -794,6 +804,9 @@ class _ImagenScreenState extends State<ImagenScreen>
   }
 
   Future<void> _loadImageFromLibrary() async {
+    ttsHelper.stop();
+    _abortListening();
+
     final ImagePicker _picker = ImagePicker();
     // Pick an image
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -809,10 +822,11 @@ class _ImagenScreenState extends State<ImagenScreen>
   }
 
   void _listen() async {
-    if (_isWelcoming) _stopWelcome();
+    if (_isWelcoming) await _stopWelcome();
 
     if (!_isListening) {
       await ttsHelper.speak(getMessageForVoicePrompting(_aiMode));
+      await ttsHelper.speak(" ");
       _animateMic(true);
       if (_speechEnabled) {
         setState(() => _isListening = true);

@@ -12,13 +12,13 @@ Welcome to Sketching!
 <emphasis level="strong">Oops, I Made a Mistake!</emphasis> No worries! Use the eraser tool to fix any little accidents.
 </p>
 <p>
-<emphasis level="strong">Thinking Time:</emphasis> Tap the thinking face to learn interesting things about your artwork. 
+<emphasis level="strong">Thinking Time:</emphasis> Tap the thinking magnifier to learn interesting things about your artwork. 
 </p>
 <p>
 <emphasis level="strong">Magic Time!</emphasis> Tap the magic wand, and watch as your sketch transforms into a fantastic picture! 
 </p>
 <p>
-<emphasis level="strong">Starting Fresh:</emphasis>  Want to try something new? The monkey will clear the picture, so you can use the magic wand again. 
+<emphasis level="strong">Starting Fresh:</emphasis>  Want to try something new? The monkey will clear the picture, so you can use the magic wand again. You can also animate and save the recording of animation. 
 </p>
 <p>
 <emphasis level="strong">Save Your work!</emphasis> Tap the elephant button! 

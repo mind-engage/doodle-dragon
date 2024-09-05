@@ -24,11 +24,8 @@ import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
-
   // Constructor for the SketchScreen which takes required API keys.
-  const SketchScreen({
-    super.key
-  });
+  const SketchScreen({super.key});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -43,56 +40,61 @@ class _SketchScreenState extends State<SketchScreen> {
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
-  bool showSketch = true;          // Flag to toggle sketch visibility.
-  bool isErasing = false;          // Flag to determine if the user is erasing.
+  bool showSketch = true; // Flag to toggle sketch visibility.
+  bool isErasing = false; // Flag to determine if the user is erasing.
 
   List<SketchPath> animatedPaths = []; // For animation
   bool _isAnimating = false;
   Timer? _timer;
 
-
   bool _isRecording = false;
   final int pointsPerFrame = 5;
 
-  GlobalKey repaintBoundaryKey = GlobalKey(); // Key for capturing the canvas as an image.
-  bool isLoading = false;                      // Flag to show a loading indicator when processing.
-  final double encodeWidth = 1080;             // Define encode width.
-  final double encodeHeight = 1920;            // Define encode height.
-  ui.Image? generatedImage;                    // Store generated image from AI analysis.
-  final List<double> _transparencyLevels = [0.0, 0.3, 0.7, 1.0];  // Transparency levels for UI components.
-  final int _currentTransparencyLevel = 3;                         // Current transparency level index.
+  GlobalKey repaintBoundaryKey =
+      GlobalKey(); // Key for capturing the canvas as an image.
+  bool isLoading = false; // Flag to show a loading indicator when processing.
+  final double encodeWidth = 1080; // Define encode width.
+  final double encodeHeight = 1920; // Define encode height.
+  ui.Image? generatedImage; // Store generated image from AI analysis.
+  final List<double> _transparencyLevels = [
+    0.0,
+    0.3,
+    0.7,
+    1.0
+  ]; // Transparency levels for UI components.
+  final int _currentTransparencyLevel = 3; // Current transparency level index.
 
-  double iconWidth = 80;          // Icon width in the UI.
-  double iconHeight = 80;         // Icon height in the UI.
-  Color selectedColor = Colors.black;  // Default drawing color.
-  double currentStrokeWidth = 5.0;     // Default stroke width.
-  List<Color> colorPalette = [         // Color palette for the drawing tool.
+  double iconWidth = 80; // Icon width in the UI.
+  double iconHeight = 80; // Icon height in the UI.
+  Color selectedColor = Colors.black; // Default drawing color.
+  double currentStrokeWidth = 5.0; // Default stroke width.
+  List<Color> colorPalette = [
+    // Color palette for the drawing tool.
     Colors.black, Colors.red, Colors.green, Colors.blue, Colors.yellow,
     const Color(0xFFf4c7a6), const Color(0xFF852311), const Color(0xFFe9a885)
   ];
 
-  late SharedPreferences prefs;    // SharedPreferences instance for local storage.
-  String learnerName = "John";     // Default name used in interactions.
-  int learnerAge = 3;              // Default age used in interactions.
-  bool _isWelcoming = false;       // Flag to manage state of welcome message.
-  bool _isAnalysing = false;       // Flag to manage state of analysis.
-  List<Map<String, dynamic>> chatHistory = []; // History of interactions for context.
+  late SharedPreferences prefs; // SharedPreferences instance for local storage.
+  String learnerName = "John"; // Default name used in interactions.
+  int learnerAge = 3; // Default age used in interactions.
+  bool _isWelcoming = false; // Flag to manage state of welcome message.
+  bool _isAnalysing = false; // Flag to manage state of analysis.
+  List<Map<String, dynamic>> chatHistory =
+      []; // History of interactions for context.
 
   TtsHelper ttsHelper = TtsHelper(); // Text-to-speech helper instance.
 
   // Generate appropriate prompts based on the current AI mode.
   String getPrompt(AiMode mode, String skillsSummary) {
-    return SketchPrompts.getPrompt(mode, learnerAge, chatHistory, skillsSummary);
+    return SketchPrompts.getPrompt(
+        mode, learnerAge, chatHistory, skillsSummary);
   }
 
   // Update the chat history with new entries.
   void updateChatHistory(String content, String sender) {
-    chatHistory.add({
-      'content': content,
-      'sender': sender
-    });
-    if (chatHistory.length >
-        20) { // Limit the history size to prevent overly long prompts
+    chatHistory.add({'content': content, 'sender': sender});
+    if (chatHistory.length > 20) {
+      // Limit the history size to prevent overly long prompts
       chatHistory.removeAt(0); // Remove the oldest entry
     }
   }
@@ -128,7 +130,7 @@ class _SketchScreenState extends State<SketchScreen> {
       openaiApiKey = apiKeyManager.openaiApiKey;
       geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
-    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
@@ -178,7 +180,6 @@ class _SketchScreenState extends State<SketchScreen> {
     if (_isWelcoming) _stopWelcome();
   }
 
-
   void toggleAnimation() {
     if (_isAnimating) {
       stopAnimation();
@@ -188,11 +189,13 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   void startAnimation() {
-    const duration = Duration(milliseconds: 10); // Control the speed of animation
+    const duration =
+        Duration(milliseconds: 10); // Control the speed of animation
     _timer?.cancel();
 
     // Clear existing animated paths and prepare for new animation
-    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    animatedPaths = List.generate(paths.length,
+        (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
     int pathIndex = 0;
     int pointIndex = 0;
 
@@ -202,7 +205,9 @@ class _SketchScreenState extends State<SketchScreen> {
         if (pointIndex < paths[pathIndex].points.length) {
           setState(() {
             // Add point by point to the corresponding path in animatedPaths
-            animatedPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
+            animatedPaths[pathIndex]
+                .points
+                .add(paths[pathIndex].points[pointIndex]);
           });
           pointIndex++;
         } else {
@@ -225,19 +230,19 @@ class _SketchScreenState extends State<SketchScreen> {
     });
   }
 
-
   void startRecording() async {
     if (!context.mounted) return;
     showLoadingDialog(context, "Saving Video...");
 
     // Initialize the video encoder with desired settings
     await FlutterQuickVideoEncoder.setup(
-      width: encodeWidth.toInt(),//image.width,
-      height: encodeHeight.toInt(),//image.height,
-      filepath: '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      width: encodeWidth.toInt(), //image.width,
+      height: encodeHeight.toInt(), //image.height,
+      filepath:
+          '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
       fps: 30, // Frame rate of the video
       videoBitrate: 1000000,
-      profileLevel:  ProfileLevel.any,
+      profileLevel: ProfileLevel.any,
       audioBitrate: 0,
       audioChannels: 0,
       sampleRate: 0,
@@ -250,7 +255,6 @@ class _SketchScreenState extends State<SketchScreen> {
     // Start capturing frames
     frameByFrameCapture();
   }
-
 
   Future<void> saveVideoToGallery(String videoPath) async {
     if (!context.mounted) return;
@@ -271,14 +275,15 @@ class _SketchScreenState extends State<SketchScreen> {
       );
     }
   }
+
   void stopRecording() async {
     if (!context.mounted || !_isRecording) return;
     await FlutterQuickVideoEncoder.finish();
     // Finalize the video encoding
-    String outputPath =  FlutterQuickVideoEncoder.filepath;
+    String outputPath = FlutterQuickVideoEncoder.filepath;
 
     saveVideoToGallery(outputPath);
-    Navigator.of(context).pop();  // Close the loading dialog
+    Navigator.of(context).pop(); // Close the loading dialog
 
     setState(() {
       _isRecording = false;
@@ -286,8 +291,10 @@ class _SketchScreenState extends State<SketchScreen> {
   }
 
   void frameByFrameCapture() async {
-    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-    List<SketchPath> recordPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+        .findRenderObject() as RenderRepaintBoundary;
+    List<SketchPath> recordPaths = List.generate(paths.length,
+        (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
 
     int pathIndex = 0;
     int pointIndex = 0;
@@ -295,9 +302,10 @@ class _SketchScreenState extends State<SketchScreen> {
     while (_isRecording && pathIndex < paths.length) {
       for (int i = 0; i < pointsPerFrame; ++i) {
         if (pointIndex < paths[pathIndex].points.length) {
-          recordPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
-            pointIndex++;
-
+          recordPaths[pathIndex]
+              .points
+              .add(paths[pathIndex].points[pointIndex]);
+          pointIndex++;
         } else {
           pathIndex++;
           pointIndex = 0;
@@ -306,14 +314,14 @@ class _SketchScreenState extends State<SketchScreen> {
           }
         }
       }
-      Uint8List frameData = await generateFrame(recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
+      Uint8List frameData = await generateFrame(
+          recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
       await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
     }
     if (pathIndex >= paths.length) {
       stopRecording(); // Automatically stop when finished
     }
   }
-
 
   // Build the main UI for the sketch screen.
   @override
@@ -340,50 +348,38 @@ class _SketchScreenState extends State<SketchScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                _isOpenaiAvailble ?  Flexible(
-                  child: IconButton(
-                    icon: Image.asset("assets/sketch_to_image.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    onPressed: () {
-                      takeSnapshotAndAnalyze(context, AiMode.sketchToImage);
-                    },
-                    tooltip: 'Sketch to Picture',
-                  ),
-                ) : Container(),
-                Flexible(
-                  child: IconButton(
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    icon: Image.asset("assets/save.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: _saveCanvas,
-                    tooltip: 'Save Image',
-                  ),
-                ),
-                Flexible(
-                  child: IconButton(
-                    icon: Image.asset("assets/share.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onPressed: shareCanvas,
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    tooltip: 'Share Image',
-                  ),
-                ),
+                _isOpenaiAvailble
+                    ? Flexible(
+                        child: IconButton(
+                          icon: Image.asset("assets/sketch_to_image.png",
+                              width: iconWidth,
+                              height: iconHeight,
+                              fit: BoxFit.fill),
+                          color: Colors.white,
+                          highlightColor: Colors.orange,
+                          onPressed: () {
+                            takeSnapshotAndAnalyze(
+                                context, AiMode.sketchToImage);
+                          },
+                          tooltip: 'Sketch to Picture',
+                        ),
+                      )
+                    : Container(),
                 Flexible(
                   child: PopupMenuButton<String>(
                     icon: Image.asset("assets/delete.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onSelected: handleMenuItemClick,  // Handling the menu item selection
-                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    onSelected:
+                        handleMenuItemClick, // Handling the menu item selection
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
                       PopupMenuItem<String>(
                         value: 'animate',
                         child: Row(
                           children: <Widget>[
-                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
-                            SizedBox(width: 10),  // Space between icon and text
+                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow,
+                                color: Colors.blue),
+                            SizedBox(width: 10), // Space between icon and text
                             Text('Animate'),
                           ],
                         ),
@@ -411,6 +407,26 @@ class _SketchScreenState extends State<SketchScreen> {
                     ],
                   ),
                 ),
+                Flexible(
+                  child: IconButton(
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    icon: Image.asset("assets/save.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: _saveCanvas,
+                    tooltip: 'Save Image',
+                  ),
+                ),
+                Flexible(
+                  child: IconButton(
+                    icon: Image.asset("assets/share.png",
+                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    onPressed: shareCanvas,
+                    color: Colors.white,
+                    highlightColor: Colors.orange,
+                    tooltip: 'Share Image',
+                  ),
+                ),
               ],
             ),
           ],
@@ -428,10 +444,10 @@ class _SketchScreenState extends State<SketchScreen> {
       bottomNavigationBar: isLandscape
           ? null
           : BottomAppBar(
-        color: Colors.lightBlue,
-        height: 180,
-        child: controlPanelPortrait(),
-      ),
+              color: Colors.lightBlue,
+              height: 180,
+              child: controlPanelPortrait(),
+            ),
     );
   }
 
@@ -445,11 +461,11 @@ class _SketchScreenState extends State<SketchScreen> {
         // Navigate to the profile page or show profile info
         break;
       case 'record':
-            if (!_isRecording) {
-              startRecording();
-            } else {
-              stopRecording();
-            }
+        if (!_isRecording) {
+          startRecording();
+        } else {
+          stopRecording();
+        }
         Log.d('Record');
         // Open settings dialog or navigate to settings page
         break;
@@ -463,66 +479,69 @@ class _SketchScreenState extends State<SketchScreen> {
         break;
     }
   }
+
   // Build the drawing area of the application.
   @override
   Widget buildBody() => Column(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onPanUpdate: (details) {
-              if (_isWelcoming) _stopWelcome();
-              if (_isAnalysing) _stopAnalysis();
-              setState(() {
-                RenderBox renderBox = context.findRenderObject() as RenderBox;
-                double appBarHeight = 150; //AppBar().toolbarHeight!;
-                double topPadding = MediaQuery.of(context).padding.top;
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                if (_isWelcoming) _stopWelcome();
+                if (_isAnalysing) _stopAnalysis();
+                setState(() {
+                  RenderBox renderBox = context.findRenderObject() as RenderBox;
+                  double appBarHeight = 150; //AppBar().toolbarHeight!;
+                  double topPadding = MediaQuery.of(context).padding.top;
 
-                Offset adjustedPosition = details.globalPosition -
-                    Offset(0, appBarHeight + topPadding);
-                Offset localPosition =
-                renderBox.globalToLocal(adjustedPosition);
+                  Offset adjustedPosition = details.globalPosition -
+                      Offset(0, appBarHeight + topPadding);
+                  Offset localPosition =
+                      renderBox.globalToLocal(adjustedPosition);
 
-                const double maxDistanceThreshold = 20.0;
+                  const double maxDistanceThreshold = 20.0;
 
-                if (!isErasing) {
-                  if (currentPath == null) {
-                    currentPath = SketchPath(selectedColor, currentStrokeWidth);
-                    paths.add(currentPath!);
+                  if (!isErasing) {
+                    if (currentPath == null) {
+                      currentPath =
+                          SketchPath(selectedColor, currentStrokeWidth);
+                      paths.add(currentPath!);
+                    }
+                    if (currentPath!.points.isEmpty ||
+                        (localPosition - currentPath!.points.last).distance <=
+                            maxDistanceThreshold) {
+                      currentPath!.points.add(localPosition);
+                    }
+                  } else {
+                    paths = paths.where((path) {
+                      return !path.points.any(
+                          (point) => (point - localPosition).distance <= 20);
+                    }).toList();
                   }
-                  if (currentPath!.points.isEmpty ||
-                      (localPosition - currentPath!.points.last).distance <=
-                          maxDistanceThreshold) {
-                    currentPath!.points.add(localPosition);
-                  }
-                } else {
-                  paths = paths.where((path) {
-                    return !path.points.any((point) =>
-                    (point - localPosition).distance <= 20);
-                  }).toList();
-                }
-              });
-            },
-            onPanEnd: (details) {
-              setState(() {
-                currentPath = null; // End the current path
-              });
-            },
-            child: RepaintBoundary(
-              key: repaintBoundaryKey, // Keep your existing key
-              child: CustomPaint(
-                painter: SketchPainter(
-                    _isAnimating  ? animatedPaths : paths,  // Use animatedPaths during animation
-                    showSketch,
-                    generatedImage,
-                    _transparencyLevels[_currentTransparencyLevel]),
-                child: Container(),
+                });
+              },
+              onPanEnd: (details) {
+                setState(() {
+                  currentPath = null; // End the current path
+                });
+              },
+              child: RepaintBoundary(
+                key: repaintBoundaryKey, // Keep your existing key
+                child: CustomPaint(
+                  painter: SketchPainter(
+                      _isAnimating
+                          ? animatedPaths
+                          : paths, // Use animatedPaths during animation
+                      showSketch,
+                      generatedImage,
+                      _transparencyLevels[_currentTransparencyLevel]),
+                  child: Container(),
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    );
-
+        ],
+      );
 
   // Build the control panel for portrait orientation.
   Widget controlPanelPortrait() {
@@ -567,9 +586,9 @@ class _SketchScreenState extends State<SketchScreen> {
                     children: [
                       Container(
                         width:
-                        40, // This width is proportional to the brush size
+                            40, // This width is proportional to the brush size
                         height:
-                        size, // Fixed height for the visual representation
+                            size, // Fixed height for the visual representation
                         color: Colors.black, // Change the color if needed
                       ),
                     ],
@@ -589,9 +608,9 @@ class _SketchScreenState extends State<SketchScreen> {
           child: IconButton(
             icon: isErasing
                 ? Image.asset("assets/eraser.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill)
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill)
                 : Image.asset("assets/eraser.png",
-                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
+                    width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
             onPressed: () {
@@ -602,7 +621,6 @@ class _SketchScreenState extends State<SketchScreen> {
             tooltip: 'Erase',
           ),
         ),
-
         Flexible(
           child: IconButton(
             icon: Image.asset("assets/analysis.png",
@@ -642,7 +660,7 @@ class _SketchScreenState extends State<SketchScreen> {
           .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final directory = (await getApplicationDocumentsDirectory()).path;
@@ -660,7 +678,8 @@ class _SketchScreenState extends State<SketchScreen> {
   void showLoadingDialog(BuildContext context, String loadingMessage) {
     showDialog(
       context: context,
-      barrierDismissible: false,  // User must not dismiss the dialog by tapping outside of it
+      barrierDismissible:
+          false, // User must not dismiss the dialog by tapping outside of it
       builder: (BuildContext context) {
         return Dialog(
           child: Container(
@@ -690,13 +709,12 @@ class _SketchScreenState extends State<SketchScreen> {
   // Save the image to the device gallery.
   Future<bool> saveImage() async {
     try {
-
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
 
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       final result = await ImageGallerySaver.saveImage(pngBytes,
@@ -718,7 +736,6 @@ class _SketchScreenState extends State<SketchScreen> {
     // Show loading dialog
     if (!context.mounted) return;
     showLoadingDialog(context, "Saving image...");
-
 
     // Then try to save the image
     saveImage().then((success) {
@@ -744,32 +761,33 @@ class _SketchScreenState extends State<SketchScreen> {
   // Take a snapshot of the canvas and initiate an analysis or image generation based on the selected mode.
   void takeSnapshotAndAnalyze(BuildContext context, AiMode selectedMode) async {
     setState(() =>
-    isLoading = true); // Set loading to true when starting the analysis
+        isLoading = true); // Set loading to true when starting the analysis
 
     ttsHelper.speak(getMessageToUser(selectedMode));
 
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by tapping outside
-      builder: (context) =>
-      const Center(child: CircularProgressIndicator()), // Show a loading spinner
+      builder: (context) => const Center(
+          child: CircularProgressIndicator()), // Show a loading spinner
     );
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
       ByteData? byteData =
-      await image.toByteData(format: ui.ImageByteFormat.png);
+          await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
 
       String base64String = base64Encode(pngBytes);
 
       // String promptText = getPrompt(selectedMode); //prompts[selectedMode]!;
-      String skillsSummary = getSkillsTextForPrompt(learnerAge); // Get skills summary
+      String skillsSummary =
+          getSkillsTextForPrompt(learnerAge); // Get skills summary
       String promptText = getPrompt(selectedMode, skillsSummary);
       List<Map<String, dynamic>> contentParts = [];
 
-      if(selectedMode == AiMode.analysis) {
+      if (selectedMode == AiMode.analysis) {
         for (var message in chatHistory) {
           contentParts.add({
             "role": message['sender'],
@@ -794,8 +812,7 @@ class _SketchScreenState extends State<SketchScreen> {
       });
 
       var response = await http.post(
-        Uri.parse(
-            '$geminiEndpoint?key=$geminiApiKey'),
+        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -848,8 +865,7 @@ class _SketchScreenState extends State<SketchScreen> {
         ttsHelper.speak("Sorry, network issue. Try again");
       }
     } finally {
-      setState(() =>
-      isLoading = false);
+      setState(() => isLoading = false);
       if (context.mounted) {
         Navigator.of(context).pop();
       }

@@ -24,12 +24,9 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 
-
 // StatefulWidget to handle the Trace Screen UI and functionality.
 class TraceScreen extends StatefulWidget {
-
-  const TraceScreen(
-      {super.key});
+  const TraceScreen({super.key});
 
   @override
   _TraceScreenState createState() => _TraceScreenState();
@@ -38,7 +35,6 @@ class TraceScreen extends StatefulWidget {
 // State class for TraceScreen with additional functionality from SingleTickerProviderStateMixin for animations.
 class _TraceScreenState extends State<TraceScreen>
     with SingleTickerProviderStateMixin {
-
   late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
@@ -46,8 +42,8 @@ class _TraceScreenState extends State<TraceScreen>
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
-  bool showSketch = true;          // Flag to toggle display of the sketch.
-  bool isErasing = false;          // Flag to toggle eraser mode.
+  bool showSketch = true; // Flag to toggle display of the sketch.
+  bool isErasing = false; // Flag to toggle eraser mode.
 
   List<SketchPath> animatedPaths = []; // For animation
   bool _isAnimating = false;
@@ -55,42 +51,49 @@ class _TraceScreenState extends State<TraceScreen>
 
   bool _isRecording = false;
   final int pointsPerFrame = 5;
-  final double encodeWidth = 1080;             // Define encode width.
-  final double encodeHeight = 1920;            // Define encode height.
+  final double encodeWidth = 1080; // Define encode width.
+  final double encodeHeight = 1920; // Define encode height.
 
-  GlobalKey repaintBoundaryKey = GlobalKey();  // Key for the widget used to capture image.
-  bool isLoading = false;                      // Flag to show a loading indicator.
-  final double canvasWidth = 1024;             // Canvas width.
-  final double canvasHeight = 1920;            // Canvas height.
-  ui.Image? generatedImage;                    // Variable to hold the generated image.
-  final List<double> _transparencyLevels = [0.0, 0.5, 1.0];  // Transparency levels for display.
-  int _currentTransparencyLevel = 2;                           // Current transparency level.
+  GlobalKey repaintBoundaryKey =
+      GlobalKey(); // Key for the widget used to capture image.
+  bool isLoading = false; // Flag to show a loading indicator.
+  final double canvasWidth = 1024; // Canvas width.
+  final double canvasHeight = 1920; // Canvas height.
+  ui.Image? generatedImage; // Variable to hold the generated image.
+  final List<double> _transparencyLevels = [
+    0.0,
+    0.5,
+    1.0
+  ]; // Transparency levels for display.
+  int _currentTransparencyLevel = 2; // Current transparency level.
 
-  double iconWidth = 80;  // Icon width for buttons.
+  double iconWidth = 80; // Icon width for buttons.
   double iconHeight = 80; // Icon height for buttons.
 
-  final stt.SpeechToText _speechToText = stt.SpeechToText();  // Speech to text instance.
-  bool _isListening = false;                                  // Flag to check if listening.
-  bool _speechEnabled = false;                                // Flag to check if speech is enabled.
-  String _sttText = "";                                       // Text obtained from speech recognition.
-  OverlayEntry? _overlayEntry;                                // Overlay entry for displaying speech text.
+  final stt.SpeechToText _speechToText =
+      stt.SpeechToText(); // Speech to text instance.
+  bool _isListening = false; // Flag to check if listening.
+  bool _speechEnabled = false; // Flag to check if speech is enabled.
+  String _sttText = ""; // Text obtained from speech recognition.
+  OverlayEntry? _overlayEntry; // Overlay entry for displaying speech text.
 
-  Color selectedColor = Colors.black;   // Default selected color for drawing.
-  double currentStrokeWidth = 5.0;      // Current stroke width for drawing.
-  List<Color> colorPalette = [          // Color palette for selection.
+  Color selectedColor = Colors.black; // Default selected color for drawing.
+  double currentStrokeWidth = 5.0; // Current stroke width for drawing.
+  List<Color> colorPalette = [
+    // Color palette for selection.
     Colors.black, Colors.red, Colors.green, Colors.blue, Colors.yellow
   ];
-  AiMode _aiMode = AiMode.promptToImage;  // Default AI mode.
-  int learnerAge = 3;                      // Default learner age, used in prompts.
+  AiMode _aiMode = AiMode.promptToImage; // Default AI mode.
+  int learnerAge = 3; // Default learner age, used in prompts.
 
-  late AnimationController _animationController;  // Controller for animations.
-  late Animation<double> _animation;              // Animation details.
+  late AnimationController _animationController; // Controller for animations.
+  late Animation<double> _animation; // Animation details.
 
-  late SharedPreferences prefs;  // Shared preferences for storing data locally.
-  String learnerName = "John";   // Default learner name.
-  bool _isWelcoming = false;     // Flag to check if welcome message is active.
+  late SharedPreferences prefs; // Shared preferences for storing data locally.
+  String learnerName = "John"; // Default learner name.
+  bool _isWelcoming = false; // Flag to check if welcome message is active.
 
-  TtsHelper ttsHelper = TtsHelper();  // Text to speech helper instance.
+  TtsHelper ttsHelper = TtsHelper(); // Text to speech helper instance.
 
   // Function to get prompt based on AI mode and user input.
   String getPrompt(AiMode mode, String userInput) {
@@ -153,7 +156,7 @@ class _TraceScreenState extends State<TraceScreen>
       openaiApiKey = apiKeyManager.openaiApiKey;
       geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
-    OpenAI.apiKey = openaiApiKey;  // Initialize OpenAI with the fetched API key.
+    OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
     _isOpenaiAvailble = openaiApiKey.isNotEmpty;
   }
 
@@ -223,14 +226,15 @@ class _TraceScreenState extends State<TraceScreen>
   }
 
   void startAnimation() {
-    const duration = Duration(milliseconds: 10); // Control the speed of animation
+    const duration =
+        Duration(milliseconds: 10); // Control the speed of animation
     _timer?.cancel();
 
     // Clear existing animated paths and prepare for new animation
-    animatedPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    animatedPaths = List.generate(paths.length,
+        (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
     int pathIndex = 0;
     int pointIndex = 0;
-
 
     // Start a periodic timer to animate the sketch
     _timer = Timer.periodic(duration, (timer) {
@@ -238,7 +242,9 @@ class _TraceScreenState extends State<TraceScreen>
         if (pointIndex < paths[pathIndex].points.length) {
           setState(() {
             // Add point by point to the corresponding path in animatedPaths
-            animatedPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
+            animatedPaths[pathIndex]
+                .points
+                .add(paths[pathIndex].points[pointIndex]);
           });
           pointIndex++;
         } else {
@@ -267,12 +273,13 @@ class _TraceScreenState extends State<TraceScreen>
 
     // Initialize the video encoder with desired settings
     await FlutterQuickVideoEncoder.setup(
-      width: encodeWidth.toInt(),//image.width,
-      height: encodeHeight.toInt(),//image.height,
-      filepath: '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      width: encodeWidth.toInt(), //image.width,
+      height: encodeHeight.toInt(), //image.height,
+      filepath:
+          '${(await getTemporaryDirectory()).path}/output_${DateTime.now().millisecondsSinceEpoch}.mp4',
       fps: 30, // Frame rate of the video
       videoBitrate: 1000000,
-      profileLevel:  ProfileLevel.any,
+      profileLevel: ProfileLevel.any,
       audioBitrate: 0,
       audioChannels: 0,
       sampleRate: 0,
@@ -313,14 +320,15 @@ class _TraceScreenState extends State<TraceScreen>
       );
     }
   }
+
   void stopRecording() async {
     if (!context.mounted || !_isRecording) return;
     await FlutterQuickVideoEncoder.finish();
     // Finalize the video encoding
-    String outputPath =  FlutterQuickVideoEncoder.filepath;
+    String outputPath = FlutterQuickVideoEncoder.filepath;
 
     saveVideoToGallery(outputPath);
-    Navigator.of(context).pop();  // Close the loading dialog
+    Navigator.of(context).pop(); // Close the loading dialog
 
     setState(() {
       _isRecording = false;
@@ -328,8 +336,10 @@ class _TraceScreenState extends State<TraceScreen>
   }
 
   void frameByFrameCapture() async {
-    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-    List<SketchPath> recordPaths = List.generate(paths.length, (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
+    RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
+        .findRenderObject() as RenderRepaintBoundary;
+    List<SketchPath> recordPaths = List.generate(paths.length,
+        (index) => SketchPath(paths[index].color, paths[index].strokeWidth));
 
     int pathIndex = 0;
     int pointIndex = 0;
@@ -337,9 +347,10 @@ class _TraceScreenState extends State<TraceScreen>
     while (_isRecording && pathIndex < paths.length) {
       for (int i = 0; i < pointsPerFrame; ++i) {
         if (pointIndex < paths[pathIndex].points.length) {
-          recordPaths[pathIndex].points.add(paths[pathIndex].points[pointIndex]);
+          recordPaths[pathIndex]
+              .points
+              .add(paths[pathIndex].points[pointIndex]);
           pointIndex++;
-
         } else {
           pathIndex++;
           pointIndex = 0;
@@ -348,7 +359,8 @@ class _TraceScreenState extends State<TraceScreen>
           }
         }
       }
-      Uint8List frameData = await generateFrame(recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
+      Uint8List frameData = await generateFrame(
+          recordPaths, boundary.size, Size(encodeWidth, encodeHeight));
       await FlutterQuickVideoEncoder.appendVideoFrame(frameData);
     }
     if (pathIndex >= paths.length) {
@@ -394,36 +406,25 @@ class _TraceScreenState extends State<TraceScreen>
                     tooltip: 'Load Image',
                   ),
                 ),
-                _isOpenaiAvailble ? Flexible(
-                  child: IconButton(
-                    icon: Image.asset("assets/imagen_square.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    onPressed: () {
-                      setState(() {
-                        _aiMode = AiMode.promptToImage;
-                      });
-                      _listen();
-                    },
-                    tooltip: 'Voice to Image',
-                  ),
-                ) : Container(),
-                Flexible(
-                  child: IconButton(
-                    icon: Image.asset("assets/analysis.png",
-                        width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    color: Colors.white,
-                    highlightColor: Colors.orange,
-                    onPressed: generatedImage != null
-                        ? () {
-                            takeSnapshotAndAnalyze(
-                                context, AiMode.analysis, "");
-                          }
-                        : _msgSelectPicture,
-                    tooltip: 'Feedback',
-                  ),
-                ),
+                _isOpenaiAvailble
+                    ? Flexible(
+                        child: IconButton(
+                          icon: Image.asset("assets/imagen_square.png",
+                              width: iconWidth,
+                              height: iconHeight,
+                              fit: BoxFit.fill),
+                          color: Colors.white,
+                          highlightColor: Colors.orange,
+                          onPressed: () {
+                            setState(() {
+                              _aiMode = AiMode.promptToImage;
+                            });
+                            _listen();
+                          },
+                          tooltip: 'Voice to Image',
+                        ),
+                      )
+                    : Container(),
                 Flexible(
                   child: IconButton(
                     icon: Image.asset("assets/share.png",
@@ -438,14 +439,17 @@ class _TraceScreenState extends State<TraceScreen>
                   child: PopupMenuButton<String>(
                     icon: Image.asset("assets/delete.png",
                         width: iconWidth, height: iconHeight, fit: BoxFit.fill),
-                    onSelected: handleMenuItemClick,  // Handling the menu item selection
-                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                    onSelected:
+                        handleMenuItemClick, // Handling the menu item selection
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
                       PopupMenuItem<String>(
                         value: 'animate',
                         child: Row(
                           children: <Widget>[
-                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow, color: Colors.white),
-                            SizedBox(width: 10),  // Space between icon and text
+                            Icon(_isAnimating ? Icons.stop : Icons.play_arrow,
+                                color: Colors.blue),
+                            SizedBox(width: 10), // Space between icon and text
                             Text('Animate'),
                           ],
                         ),
@@ -457,6 +461,17 @@ class _TraceScreenState extends State<TraceScreen>
                             Icon(Icons.videocam),
                             SizedBox(width: 10),
                             Text('Record'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'transparency',
+                        child: Row(
+                          children: <Widget>[
+                            Image.asset("assets/transparency.png",
+                                width: 20, height: 20),
+                            SizedBox(width: 10),
+                            Text('Transparency'),
                           ],
                         ),
                       ),
@@ -521,6 +536,18 @@ class _TraceScreenState extends State<TraceScreen>
         Log.d('Record');
         // Open settings dialog or navigate to settings page
         break;
+      case 'transparency':
+        if (generatedImage != null) {
+          setState(() {
+            _currentTransparencyLevel =
+                (_currentTransparencyLevel + 1) % _transparencyLevels.length;
+          });
+        } else {
+          _msgSelectPicture();
+        }
+        Log.d('Transparency');
+        // Open settings dialog or navigate to settings page
+        break;
     }
   }
 
@@ -532,20 +559,22 @@ class _TraceScreenState extends State<TraceScreen>
                 if (_isWelcoming) _stopWelcome();
                 if (generatedImage != null) {
                   setState(() {
-                    RenderBox renderBox = context.findRenderObject() as RenderBox;
+                    RenderBox renderBox =
+                        context.findRenderObject() as RenderBox;
                     double appBarHeight = 150; //AppBar().toolbarHeight!;
                     double topPadding = MediaQuery.of(context).padding.top;
 
                     Offset adjustedPosition = details.globalPosition -
                         Offset(0, appBarHeight + topPadding);
                     Offset localPosition =
-                    renderBox.globalToLocal(adjustedPosition);
+                        renderBox.globalToLocal(adjustedPosition);
 
                     const double maxDistanceThreshold = 20.0;
 
                     if (!isErasing) {
                       if (currentPath == null) {
-                        currentPath = SketchPath(selectedColor, currentStrokeWidth);
+                        currentPath =
+                            SketchPath(selectedColor, currentStrokeWidth);
                         paths.add(currentPath!);
                       }
                       if (currentPath!.points.isEmpty ||
@@ -555,8 +584,8 @@ class _TraceScreenState extends State<TraceScreen>
                       }
                     } else {
                       paths = paths.where((path) {
-                        return !path.points.any((point) =>
-                        (point - localPosition).distance <= 20);
+                        return !path.points.any(
+                            (point) => (point - localPosition).distance <= 20);
                       }).toList();
                     }
                   });
@@ -571,7 +600,9 @@ class _TraceScreenState extends State<TraceScreen>
                 key: repaintBoundaryKey,
                 child: CustomPaint(
                   painter: SketchPainter(
-                      _isAnimating ? animatedPaths : paths, showSketch, generatedImage,
+                      _isAnimating ? animatedPaths : paths,
+                      showSketch,
+                      generatedImage,
                       _transparencyLevels[_currentTransparencyLevel]),
                   child: Container(),
                 ),
@@ -664,22 +695,16 @@ class _TraceScreenState extends State<TraceScreen>
         ),
         Flexible(
           child: IconButton(
-            icon: Image.asset("assets/transparency.png",
-                width: iconWidth,
-                height: iconHeight,
-                fit: BoxFit.fill), // Example icon - you can customize
+            icon: Image.asset("assets/analysis.png",
+                width: iconWidth, height: iconHeight, fit: BoxFit.fill),
             color: Colors.white,
             highlightColor: Colors.orange,
             onPressed: generatedImage != null
                 ? () {
-                    setState(() {
-                      _currentTransparencyLevel =
-                          (_currentTransparencyLevel + 1) %
-                              _transparencyLevels.length;
-                    });
+                    takeSnapshotAndAnalyze(context, AiMode.analysis, "");
                   }
                 : _msgSelectPicture,
-            tooltip: 'Transparency',
+            tooltip: 'Feedback',
           ),
         ),
       ],
@@ -826,8 +851,7 @@ class _TraceScreenState extends State<TraceScreen>
       });
 
       var response = await http.post(
-        Uri.parse(
-          '$geminiEndpoint?key=$geminiApiKey'),
+        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -883,8 +907,7 @@ class _TraceScreenState extends State<TraceScreen>
       });
 
       var response = await http.post(
-        Uri.parse(
-            '$geminiEndpoint?key=$geminiApiKey'),
+        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonBody,
       );
@@ -1013,7 +1036,8 @@ class _TraceScreenState extends State<TraceScreen>
   void showLoadingDialog(BuildContext context, String loadingMessage) {
     showDialog(
       context: context,
-      barrierDismissible: false,  // User must not dismiss the dialog by tapping outside of it
+      barrierDismissible:
+          false, // User must not dismiss the dialog by tapping outside of it
       builder: (BuildContext context) {
         return Dialog(
           child: Container(
