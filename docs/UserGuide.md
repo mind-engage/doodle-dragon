@@ -12,11 +12,18 @@ It is attempt to make Generative AI available to young children under parental g
 
 **Settings Icon:** Access app settings, manage API keys, and configure preferences.
 
+### Preferences
+**Learners Age:** Customize your Doodle Dragon experience.
+Choose the child's age to set the context for AI prompt-engineering.
+
+**API Key Configuration:** Enter API Key: Securely input your Gemini and OpenAI API keys for app functionality.
+
+
 ## Main Menu
 
 <img src=../assets/pencil_icon.png width=30>**Sketching Mode:**  Jump into a freeform drawing environment.  
 <img src=../assets/trace_icon.png width=30>**Tracing Mode:** Practice tracing over existing images with guided feedback.  
-<img src=../assets/imagen_icon.png width=30>**Imagining Mode:** Create stories and images from your sketches.
+<img src=../assets/imagen_icon.png width=30>**Imagining Mode:** Generate images. Create stories and images from your images.
 
 ## Sketching Mode
 
@@ -94,13 +101,6 @@ Leverage AI to turn your sketches into stories or new images.
 
 <img src=../assets/doodle_mic_on.png width=30> **Voice command** for Voice to Image / Explore commands. Press the Icon button after speaking the command.
 
-## Settings Screen
-
-### Customize your Doodle Dragon experience.
-**API Key Configuration:** Enter API Key: Securely input your Gemini and OpenAI API keys for app functionality.
-
-### Preferences
-**Learners Age:** Choose the child's age to set the context for AI prompt-engineering.
 
 ## Support and Feedback
 
