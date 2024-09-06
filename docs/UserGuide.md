@@ -31,7 +31,7 @@ Tool Panel
 
     Top Panel:
     Magic Wand: Generate image from your sketch. Optional and requires OpenAI key to be set.
-    Undo Button: Undo the image generation and go back to sketch.
+    Advanced(Monkey): Delete generated image, animated sketch, record animated sketch.
     Save (Elephant): Save the generated image
     Share: Share the generated image.
 
@@ -47,13 +47,13 @@ Tracing Tools
     Brush Tool/Color Picker: Select to start drawing. Change brush colors.
     Brush Size Slider: Adjust the thickness of your brush.
     Eraser Tool: Erase parts of your sketch.
-    Opacity Slider: Adjust the transparency of the image to better see your traces.
+    Analyzer: Feedback on your tracing.
     
     Top Panel:
     Library: Library of images for tracing.
     Speaker(Magic wnad): Generate your own image. A mic appears at bottom left area to listen your voice input.
-    Analyzer: Feedback on your tracing.
     Share: Shate your artwork
+    Advanced(Monkey): Transparency control, animated tracing, record animated tracing.
 
 
 Imagining Mode
