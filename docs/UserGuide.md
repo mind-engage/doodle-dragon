@@ -6,15 +6,17 @@ Home Screen
 
 Upon launching Doodle Dragon, you'll be greeted by the Home Screen, which serves as your navigation hub to different creative modes and settings.
 
+It is attempt to make Generative AI available to young children under parental guidance.
+
 ## Top Navigation Bar
 
 **Settings Icon:** Access app settings, manage API keys, and configure preferences.
 
 ## Main Menu
 
-**Sketching Mode:** Jump into a freeform drawing environment.  
-**Tracing Mode:** Practice tracing over existing images with guided feedback.  
-**Imagining Mode:** Create stories and images from your sketches.
+<img src=../assets/pencil_icon.png width=30>**Sketching Mode:**  Jump into a freeform drawing environment.  
+<img src=../assets/trace_icon.png width=30>**Tracing Mode:** Practice tracing over existing images with guided feedback.  
+<img src=../assets/imagen_icon.png width=30>**Imagining Mode:** Create stories and images from your sketches.
 
 ## Sketching Mode
 
@@ -25,16 +27,21 @@ Transform your device into a digital canvas where you can draw, sketch, and dood
 
 ### Tool Panel
 #### Bottom Panel:
-**Brush Tool/Color Picker:** Select to start drawing. Change brush colors.
-**Brush Size Slider:** Adjust the thickness of your brush.  
-**Eraser Tool:** Erase parts of your sketch.
-**Analyse:** Get instant AI feedback on your drawing.
+<img src=../assets/brush.png width=30> **Brush Tool/Color Picker:** Select to start drawing. Change brush colors.  
+<img src=../assets/brush_size.png width=30> **Brush Size Slider:** Adjust the thickness of your brush.  
+<img src=../assets/eraser.png width=30> **Eraser Tool:** Erase parts of your sketch.  
+<img src=../assets/analysis.png width=30> **Analyse:** Get instant AI feedback on your drawing.
 
 #### Top Panel:
-**Magic Wand:** Generate image from your sketch. Optional and requires OpenAI key to be set. 
-**Advanced(Monkey):** Delete generated image, animated sketch, record animated sketch. 
-**Save (Elephant):** Save the generated image
-**Share:** Share the generated image.
+<img src=../assets/sketch_to_image.png width=30> **Magic Wand:** Generate image from your sketch. Optional and requires OpenAI key to be set.   
+<img src=../assets/delete.png width=30> **Advanced(Monkey):** Popup menu for advanced options:
+- Delete generated image, 
+- animated sketch,  
+- record animated sketch.
+
+
+<img src=../assets/save.png width=30> **Save (Elephant):** Save the generated image  
+<img src=../assets/share.png width=30> **Share:** Share the generated image.
 
 ## Tracing Mode
 
@@ -42,16 +49,23 @@ Perfect your drawing skills by tracing over images with precision.
 
 ### Tracing Tools
 #### Bottom Panel:
-**Brush Tool/Color Picker:** Select to start drawing. Change brush colors.  
-**Brush Size Slider:** Adjust the thickness of your brush.  
-**Eraser Tool:** Erase parts of your sketch.  
-**Analyzer:** Feedback on your tracing.
+<img src=../assets/brush.png width=30> **Brush Tool/Color Picker:** Select to start drawing. Change brush colors.  
+<img src=../assets/brush_size.png width=30> **Brush Size Slider:** Adjust the thickness of your brush.  
+<img src=../assets/eraser.png width=30> **Eraser Tool:** Erase parts of your sketch.  
+<img src=../assets/analysis.png width=30> **Analyzer:** Feedback on your tracing.
     
 #### Top Panel:
-**Library:** Library of images for tracing.  
-**Speaker(Magic wnad):** Generate your own image. A mic appears at bottom left area to listen your voice input.  
-**Share:** Shate your artwork  
-**Advanced(Monkey):** Transparency control, animated tracing, record animated tracing.
+<img src=../assets/library.png width=30> **Library:** Library of images for tracing.  
+<img src=../assets/imagen_square.png width=30> **Speaker(Magic wnad):** Generate your own image. A mic appears at bottom left area to listen your voice input.  
+<img src=../assets/share.png width=30> **Share:** Shate your artwork  
+<img src=../assets/delete.png width=30> **Advanced(Monkey):** Popup menu for advanced options.   
+- Transparency control, 
+- animated tracing, 
+- Record animated tracing.
+
+### Floating Mic Icon
+
+<img src=../assets/doodle_mic_on.png width=30> **Voice command** for Speaker(Magic wnad). Press the Icon button after speaking the command.
 
 
 ### Imagining Mode
@@ -59,16 +73,20 @@ Perfect your drawing skills by tracing over images with precision.
 Leverage AI to turn your sketches into stories or new images.
 
 ### Bottom Panel:
-**Voice to Image / Explore:** Speak into your device to create images from voice commands. Or explore the exisitng image.  
-**Generate Story Button:** Create a narrative based on your drawings.  
-**Generate Poem Button:** Create a poem based on your drawings.  
-**Speaker/Mic Cancel:** Cancel story narration or voice input.
+<img src=../assets/save.png width=30> **Voice to Image / Explore:** Speak into your device to create images from voice commands. Or explore the exisitng image.  
+<img src=../assets/save.png width=30> **Generate Story Button:** Create a narrative based on your drawings.  
+<img src=../assets/save.png width=30> **Generate Poem Button:** Create a poem based on your drawings.  
+<img src=../assets/save.png width=30> **Speaker/Mic Cancel:** Cancel story narration or voice input.
 
 ### Top Panel
-***Camera:** Capture a picture and explore it further using Explore button   
-**Load image from Library:** Open an image and explore it further using Explore button.  
-**Save:** Save the generate image  
-**Share:** Share the generate image, story and/or Poem
+<img src=../assets/camera.png width=30> **Camera:** Capture a picture and explore it further using Explore button   
+<img src=../assets/library.png width=30> **Load image from Library:** Open an image and explore it further using Explore button.  
+<img src=../assets/save.png width=30> **Save:** Save the generate image  
+<img src=../assets/share.png width=30> **Share:** Share the generate image, story and/or poem
+
+### Floating Mic Icon
+
+<img src=../assets/doodle_mic_on.png width=30> **Voice command** for Voice to Image / Explore commands. Press the Icon button after speaking the command.
 
 ## Settings Screen
 
