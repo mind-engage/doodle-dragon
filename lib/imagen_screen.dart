@@ -513,7 +513,8 @@ class _ImagenScreenState extends State<ImagenScreen>
 
       // Using Share.shareXFiles from share_plus
       await Share.shareXFiles([XFile(imgFile.path)],
-          text: 'Check out my sketch!\n\n$generatedPoem\n\n$generatedStory');
+          text:
+              'Check out my Doodle Dragon creation!\n\nPoem:\n$generatedPoem\n\nStory:\n$generatedStory');
     } catch (e) {
       if (kDebugMode) {
         Log.d('Error sharing canvas: $e');

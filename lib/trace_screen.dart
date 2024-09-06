@@ -175,9 +175,9 @@ class _TraceScreenState extends State<TraceScreen>
     ttsHelper.speak(userMessageTraceScreen);
   }
 
-  void _stopWelcome() {
+  Future<void> _stopWelcome() async {
     _isWelcoming = false;
-    ttsHelper.stop();
+    await ttsHelper.astop();
   }
 
   void _msgSelectPicture() {
@@ -957,11 +957,12 @@ class _TraceScreenState extends State<TraceScreen>
   }
 
   void _listen() async {
-    if (_isWelcoming) _stopWelcome();
+    if (_isWelcoming) await _stopWelcome();
     if (_isListening) await _abortListening();
 
     if (!_isListening) {
       await ttsHelper.speak("Can you tell me what you'd like to draw?");
+      await ttsHelper.speak(" ");
       _animateMic(true);
       if (_speechEnabled) {
         setState(() => _isListening = true);
