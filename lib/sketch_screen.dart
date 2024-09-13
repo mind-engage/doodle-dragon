@@ -24,8 +24,9 @@ import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
+  GeminiProxy geminiProxy;
   // Constructor for the SketchScreen which takes required API keys.
-  const SketchScreen({super.key});
+  const SketchScreen({super.key, required this.geminiProxy});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -33,7 +34,6 @@ class SketchScreen extends StatefulWidget {
 
 // Private State class handling the logic and UI of SketchScreen.
 class _SketchScreenState extends State<SketchScreen> {
-  late String geminiApiKey;
   late String openaiApiKey;
   bool _isOpenaiAvailble = false;
   late String geminiEndpoint;
