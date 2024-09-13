@@ -7,13 +7,24 @@ import 'sketch_screen.dart';
 import 'trace_screen.dart';
 import 'imagen_screen.dart';
 import 'settings_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../utils/log.dart';
+import 'firebase_options.dart'; // Make sure to create this file
+import "utils/gemini_proxy.dart";
 
 // Main entry point of the Flutter application.
 Future main() async {
   // Ensure that Flutter widgets are bound to the framework before executing any other operations.
   WidgetsFlutterBinding.ensureInitialized();
-  // Load environment variables from the .env file.
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Attempt to load environment variables from the .env file if it exists.
   try {
     await dotenv.load(fileName: "dotenv");
@@ -51,7 +62,98 @@ class DoodleDragon extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         fontFamily: 'ComicSansMS',
       ),
-      home: HomeScreen(),
+      home: AuthGate(), // Use AuthGate to manage authentication
+    );
+  }
+}
+
+// Widget to handle authentication state (sign-in or home screen)
+class AuthGate extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return HomeScreen();
+        } else {
+          return SignInScreen(); // Display the sign-in screen
+        }
+      },
+    );
+  }
+}
+
+// Sign-in screen with options for Google and Apple Sign-In
+class SignInScreen extends StatefulWidget {
+  @override
+  _SignInScreenState createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  // Function to handle Google Sign-In
+  Future<UserCredential> signInWithGoogle() async {
+    // Trigger the authentication flow
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication? googleAuth =
+    await googleUser?.authentication;
+
+    // Create a new credential
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth?.accessToken,
+      idToken: googleAuth?.idToken,
+    );
+
+    // Once signed in, return the UserCredential
+    return await FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
+  // Function to handle Apple Sign-In (iOS only)
+  Future<UserCredential> signInWithApple() async {
+    // Request credential for the currently signed in Apple account.
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+
+    // Create a new credential
+    final oauthCredential = OAuthProvider("apple.com").credential(
+      idToken: appleCredential.identityToken,
+      accessToken: appleCredential.authorizationCode,
+    );
+
+    // Once signed in, return the UserCredential
+    return await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Sign In'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Google Sign-In button
+            ElevatedButton(
+              onPressed: signInWithGoogle,
+              child: Text('Sign in with Google'),
+            ),
+            SizedBox(height: 20),
+            // Apple Sign-In button (iOS only)
+            if (Theme.of(context).platform == TargetPlatform.iOS)
+              SignInWithAppleButton(
+                onPressed: signInWithApple,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
