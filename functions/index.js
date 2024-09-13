@@ -37,13 +37,16 @@ const authenticateRequest = async (req, res, next) => {
 
 
 exports.initNewUser = functions.auth.user().onCreate((user) => {
+  // Set up the new user data, including default limits for text and image tokens
   const newUser = {
     uid: user.uid,
     totalTokensConsumed: 0,
-    totalTokenLimit: 1000,  // Default limit
-    // other default settings
+    totalTokenLimit: 1000,  // Default limit for text tokens
+    imageTokensConsumed: 0,
+    imageTotalTokenLimit: 100  // Default limit for image tokens
   };
 
+  // Add the new user to Firestore with the default settings
   return admin.firestore().collection('users').doc(user.uid).set(newUser)
     .then(() => {
       console.log('User initialized successfully:', user.uid);
@@ -53,14 +56,14 @@ exports.initNewUser = functions.auth.user().onCreate((user) => {
     });
 });
 
-// Proxy request to OpenAI API
+
+// Proxy request to OpenAI API with token usage management
 exports.proxyOpenAI = onRequest({ cors: true, secrets: [OPENAI_API_KEY] }, async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).send('Method Not Allowed');
     }
 
     try {
-
         // Authenticate request
         await authenticateRequest(req, res, () => {});
 
@@ -70,24 +73,77 @@ exports.proxyOpenAI = onRequest({ cors: true, secrets: [OPENAI_API_KEY] }, async
         const openai = new OpenAI({
             apiKey: openaiApiKey,
          });
-         
+
          console.log(req.body);
 
-         const { prompt, n = 1, size = '1024x1024', responseFormat = 'b64_json' } = req.body;
+         const { model = "dall-e-2", prompt, n = 1, size = '1024x1024', responseFormat = 'b64_json' } = req.body;
+
+        // Calculate token cost based on model and size
+        let tokenCost;
+        switch (model) {
+            case 'dall-e-3':
+                switch (size) {
+                    case '1024x1024':
+                        tokenCost = 0.040 * n;
+                        break;
+                    case '1024x1792':
+                        tokenCost = 0.080 * n;
+                        break;
+                }
+                break;
+            case 'dall-e-2':
+                switch (size) {
+                    case '1024x1024':
+                        tokenCost = 0.020 * n;
+                        break;
+                    case '512x512':
+                        tokenCost = 0.018 * n;
+                        break;
+                    case '256x256':
+                        tokenCost = 0.016 * n;
+                        break;
+                }
+                break;
+        }
+
+        // Retrieve user's token usage and limit from Firestore
+        const db = getFirestore();
+        const userRef = db.collection('users').doc(req.user.uid);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const userData = userDoc.data();
+        const imageTokensConsumed = userData.imageTokensConsumed || 0;
+        const imageTotalTokenLimit = userData.imageTotalTokenLimit || 100; // Default limit
+
+        if (imageTokensConsumed + tokenCost > imageTotalTokenLimit) {
+            return res.status(403).json({ error: 'Image token limit exceeded' });
+        }
+
         // Call OpenAI's image generation endpoint
         const response = await openai.images.generate({
+            model: model,
             prompt: prompt,
             n: n,
-            size: size, // Map the enum value (e.g., '1024x1024')
-            response_format: responseFormat, // b64_json or url
-         });
-        // Make a POST request to OpenAI API
+            size: size,
+            response_format: responseFormat,
+        });
+
+        // Update Firestore with the new token count
+        await userRef.update({
+            imageTokensConsumed: imageTokensConsumed + tokenCost
+        });
+
+        // Send the response from the OpenAI API
         res.json(response.data);
     } catch (error) {
         console.error('Error in OpenAI request:', error);
         res.status(500).json({ error: 'Failed to contact OpenAI API' });
     }
 });
+
 
 // Proxy request to Gemini API
 exports.proxyGemini = onRequest({ cors: true, secrets: [GEMINI_API_KEY] }, async (req, res) => {
