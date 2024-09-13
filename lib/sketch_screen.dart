@@ -21,12 +21,16 @@ import "ai_prompts/sketch_prompts.dart";
 import 'utils/child_skill_levels.dart';
 import 'utils/api_key_manager.dart';
 import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
+import 'utils/gemini_proxy.dart'; // Import GeminiProxy
+import 'utils/openai_proxy.dart'; // Import GeminiProxy
 
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
-  GeminiProxy geminiProxy;
+  final GeminiProxy geminiProxy;
+  final OpenAiProxy openaiProxy;
+
   // Constructor for the SketchScreen which takes required API keys.
-  const SketchScreen({super.key, required this.geminiProxy});
+  const SketchScreen({super.key, required this.geminiProxy, required this.openaiProxy});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -35,8 +39,7 @@ class SketchScreen extends StatefulWidget {
 // Private State class handling the logic and UI of SketchScreen.
 class _SketchScreenState extends State<SketchScreen> {
   late String openaiApiKey;
-  bool _isOpenaiAvailble = false;
-  late String geminiEndpoint;
+  bool _isOpenaiAvailable = false;
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
@@ -51,7 +54,7 @@ class _SketchScreenState extends State<SketchScreen> {
   final int pointsPerFrame = 5;
 
   GlobalKey repaintBoundaryKey =
-      GlobalKey(); // Key for capturing the canvas as an image.
+  GlobalKey(); // Key for capturing the canvas as an image.
   bool isLoading = false; // Flag to show a loading indicator when processing.
   final double encodeWidth = 1080; // Define encode width.
   final double encodeHeight = 1920; // Define encode height.
@@ -107,7 +110,7 @@ class _SketchScreenState extends State<SketchScreen> {
       case AiMode.sketchToImage:
         return "$learnerName I will convert your sketch to an image. Please wait";
       default:
-        return ""; // Handle any other cases or throw an error if needed
+        return "";
     }
   }
 
@@ -117,7 +120,6 @@ class _SketchScreenState extends State<SketchScreen> {
     super.initState();
     _initializeKeys();
     loadSettings();
-    //OpenAI.apiKey = widget.openaiApiKey; // Set OpenAI API key from widget property.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _welcomeMessage(); // Display a welcome message after the frame build is complete.
     });
@@ -126,12 +128,10 @@ class _SketchScreenState extends State<SketchScreen> {
   Future<void> _initializeKeys() async {
     final apiKeyManager = await APIKeyManager.getInstance();
     setState(() {
-      geminiApiKey = apiKeyManager.geminiApiKey;
       openaiApiKey = apiKeyManager.openaiApiKey;
-      geminiEndpoint = apiKeyManager.geminiEndpoint;
     });
     OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
-    _isOpenaiAvailble = openaiApiKey.isNotEmpty;
+    _isOpenaiAvailable = openaiApiKey.isNotEmpty;
   }
 
   // Dispose of resources when the widget is removed from the tree.
@@ -348,8 +348,7 @@ class _SketchScreenState extends State<SketchScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                _isOpenaiAvailble
-                    ? Flexible(
+                _isOpenaiAvailable ? Flexible(
                         child: IconButton(
                           icon: Image.asset("assets/sketch_to_image.png",
                               width: iconWidth,
@@ -771,6 +770,7 @@ class _SketchScreenState extends State<SketchScreen> {
       builder: (context) => const Center(
           child: CircularProgressIndicator()), // Show a loading spinner
     );
+
     try {
       RenderRepaintBoundary boundary = repaintBoundaryKey.currentContext!
           .findRenderObject()! as RenderRepaintBoundary;
@@ -811,11 +811,8 @@ class _SketchScreenState extends State<SketchScreen> {
         "contents": contentParts,
       });
 
-      var response = await http.post(
-        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonBody,
-      );
+      // Use GeminiProxy to process the request
+      var response = await widget.geminiProxy.process(jsonBody);
       Log.d("History: $chatHistory");
       Log.d("Prompt: $promptText");
       if (response.statusCode == 200) {
@@ -831,13 +828,7 @@ class _SketchScreenState extends State<SketchScreen> {
           } else if (selectedMode == AiMode.sketchToImage) {
             // Generate an image from a text prompt
             try {
-              final imageResponse = await OpenAI.instance.image.create(
-                model: 'dall-e-3',
-                prompt: responseText,
-                n: 1,
-                size: OpenAIImageSize.size1024,
-                responseFormat: OpenAIImageResponseFormat.b64Json,
-              );
+              final imageResponse = await widget.openaiProxy.process('dall-e-3', responseText, OpenAIImageSize.size1024);
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {

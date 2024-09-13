@@ -13,10 +13,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../utils/log.dart';
 import 'firebase_options.dart'; // Make sure to create this file
-import "utils/gemini_proxy.dart";
+import "utils/gemini_proxy.dart"; // Import the GeminiProxy class
+import "utils/openai_proxy.dart";
+import 'utils/api_key_manager.dart';
 
 // Main entry point of the Flutter application.
-Future main() async {
+Future<void> main() async {
   // Ensure that Flutter widgets are bound to the framework before executing any other operations.
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -27,30 +29,49 @@ Future main() async {
 
   // Attempt to load environment variables from the .env file if it exists.
   try {
-    await dotenv.load(fileName: "dotenv");
+    await dotenv.load(fileName: "dotenv"); // Correct file name to ".env"
   } catch (e) {
     // Handle the case where the .env file doesn't exist or other errors occur.
     Log.d("Failed to load .env file: $e");
   }
+
   // Lock orientation to portrait mode.
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
   // Run the application after initializing it.
   runApp(await DoodleDragon.initialize());
 }
 
 // Stateless widget for the main application.
 class DoodleDragon extends StatelessWidget {
-  // Constructor requiring API keys.
-  DoodleDragon();
+  final GeminiProxy geminiProxy;
+  final OpenAiProxy openaiProxy;
+
+  // Constructor requiring the GeminiProxy instance.
+  DoodleDragon({required this.geminiProxy, required this.openaiProxy});
 
   // Factory method to asynchronously fetch API keys from SharedPreferences or .env file before building the widget.
   static Future<DoodleDragon> initialize() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    final apiKeyManager = await APIKeyManager.getInstance();
+    // Get Gemini API keys and endpoint from SharedPreferences or .env
+    //String geminiApiKey = prefs.getString('GEMINI_API_KEY') ?? dotenv.env['GEMINI_API_KEY'] ?? '';
+    //String geminiEndpoint = prefs.getString('GEMINI_ENDPOINT') ?? dotenv.env['GEMINI_ENDPOINT'] ?? '';
 
-    return DoodleDragon();
+    String geminiApiKey = apiKeyManager.geminiApiKey;
+    String openaiApiKey = apiKeyManager.openaiApiKey;
+    String geminiEndpoint = apiKeyManager.geminiEndpoint;
+
+    // Initialize the GeminiProxy instance
+    GeminiProxy geminiProxy = GeminiProxy(geminiEndpoint, geminiApiKey);
+
+    // Initialize the GeminiProxy instance
+    OpenAiProxy openaiProxy = OpenAiProxy("", openaiApiKey);
+
+    return DoodleDragon(geminiProxy: geminiProxy, openaiProxy: openaiProxy);
   }
 
   // Build the MaterialApp with the specified theme and home screen.
@@ -62,20 +83,25 @@ class DoodleDragon extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         fontFamily: 'ComicSansMS',
       ),
-      home: AuthGate(), // Use AuthGate to manage authentication
+      home: AuthGate(geminiProxy: geminiProxy, openaiProxy: openaiProxy,), // Pass geminiProxy to AuthGate
     );
   }
 }
 
 // Widget to handle authentication state (sign-in or home screen)
 class AuthGate extends StatelessWidget {
+  final GeminiProxy geminiProxy;
+  final OpenAiProxy openaiProxy;
+
+  AuthGate({required this.geminiProxy, required this.openaiProxy});
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return HomeScreen();
+          return HomeScreen(geminiProxy: geminiProxy, openaiProxy: openaiProxy); // Pass geminiProxy to HomeScreen
         } else {
           return SignInScreen(); // Display the sign-in screen
         }
@@ -160,8 +186,11 @@ class _SignInScreenState extends State<SignInScreen> {
 
 // Stateful widget for the home screen.
 class HomeScreen extends StatefulWidget {
-  // Constructor requiring API keys.
-  HomeScreen();
+  final GeminiProxy geminiProxy;
+  final OpenAiProxy openaiProxy;
+
+  // Constructor requiring the GeminiProxy instance.
+  HomeScreen({required this.geminiProxy, required this.openaiProxy});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -200,7 +229,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.settings),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsScreen()),
+            ),
           ),
         ],
       ),
@@ -221,14 +253,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Image.asset('assets/doodle_dragon_logo.png', height: 200),
               ),
               SizedBox(height: 40),
-              _buildElevatedButton('Start Sketching!', 'assets/pencil_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => SketchScreen()))),
+              _buildElevatedButton('Start Sketching!', 'assets/pencil_icon.png', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SketchScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
+                  ),
+                );
+              }),
               SizedBox(height: 20),
-              _buildElevatedButton('Start Tracing!', 'assets/trace_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => TraceScreen()))),
+              _buildElevatedButton('Start Tracing!', 'assets/trace_icon.png', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TraceScreen(),
+                  ),
+                );
+              }),
               SizedBox(height: 20),
-              _buildElevatedButton('Start Imagen!', 'assets/imagen_icon.png', () => Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => ImagenScreen()))),
+              _buildElevatedButton('Start Imagen!', 'assets/imagen_icon.png', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImagenScreen(),
+                  ),
+                );
+              }),
             ],
           ),
         ),

@@ -1,17 +1,19 @@
+import 'package:dart_openai/dart_openai.dart';
 
 class OpenAiProxy {
   final String endPoint;
   final String apiKey;
 
-  OpenAiProxy(this.geminiEndpoint, this.strokeWidth, {List<Offset>? points})
-      : this.points = points ?? [];
+  OpenAiProxy(this.endPoint, this.apiKey);
 
-  Furutre<String> process(String jsonBody) async {
-    var response = await http.post(
-      Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonBody,
+  Future<OpenAIImageModel> process(String model, String prompt, OpenAIImageSize size) async {
+    final imageResponse = await OpenAI.instance.image.create(
+      model: model,
+      prompt: prompt,
+      n: 1,
+      size: size,
+      responseFormat: OpenAIImageResponseFormat.b64Json,
     );
-    return response;
+    return imageResponse;
   }
 }
