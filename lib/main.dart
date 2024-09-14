@@ -47,30 +47,16 @@ Future<void> main() async {
 
 // Stateless widget for the main application.
 class DoodleDragon extends StatelessWidget {
-  final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
 
   // Constructor requiring the GeminiProxy instance.
-  DoodleDragon({required this.geminiProxy, required this.openaiProxy});
+  DoodleDragon();
 
   // Factory method to asynchronously fetch API keys from SharedPreferences or .env file before building the widget.
+
   static Future<DoodleDragon> initialize() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     final apiKeyManager = await APIKeyManager.getInstance();
-
-    String geminiApiKey = apiKeyManager.geminiApiKey;
-    String openaiApiKey = apiKeyManager.openaiApiKey;
-    String geminiEndpoint = apiKeyManager.geminiEndpoint;
-
-    // Initialize the GeminiProxy instance
-    GeminiProxy geminiProxy = DirectGeminiProxy(geminiEndpoint, geminiApiKey);
-
-    // Initialize the GeminiProxy instance
-    OpenAiProxy openaiProxy = DirectOpenAiProxy("", openaiApiKey);
-
-    return DoodleDragon(geminiProxy: geminiProxy, openaiProxy: openaiProxy);
+    return DoodleDragon();
   }
-
   // Build the MaterialApp with the specified theme and home screen.
   @override
   Widget build(BuildContext context) {
@@ -80,17 +66,15 @@ class DoodleDragon extends StatelessWidget {
         primarySwatch: Colors.deepPurple,
         fontFamily: 'ComicSansMS',
       ),
-      home: AuthGate(geminiProxy: geminiProxy, openaiProxy: openaiProxy,), // Pass geminiProxy to AuthGate
+      home: AuthGate(), // Pass geminiProxy to AuthGate
     );
   }
 }
 
 // Widget to handle authentication state (sign-in or home screen)
 class AuthGate extends StatelessWidget {
-  final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
 
-  AuthGate({required this.geminiProxy, required this.openaiProxy});
+  AuthGate();
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +82,7 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return HomeScreen(geminiProxy: geminiProxy, openaiProxy: openaiProxy); // Pass geminiProxy to HomeScreen
+          return HomeScreen(); // Pass geminiProxy to HomeScreen
         } else {
           return SignInScreen(); // Display the sign-in screen
         }
@@ -183,11 +167,9 @@ class _SignInScreenState extends State<SignInScreen> {
 
 // Stateful widget for the home screen.
 class HomeScreen extends StatefulWidget {
-  final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
 
   // Constructor requiring the GeminiProxy instance.
-  HomeScreen({required this.geminiProxy, required this.openaiProxy});
+  HomeScreen();
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -198,15 +180,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _animation;
 
+   GeminiProxy? geminiProxy;
+   OpenAiProxy? openaiProxy;
+
   // Initialize state, setting up the animation controller.
   @override
   void initState() {
     super.initState();
+    initializeApi();
     _controller = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
     )..repeat(reverse: true);
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  Future<void> initializeApi() async {
+    final apiKeyManager = await APIKeyManager.getInstance();
+    /*
+    String geminiApiKey = apiKeyManager.geminiApiKey;
+    String openaiApiKey = apiKeyManager.openaiApiKey;
+    String geminiEndpoint = apiKeyManager.geminiEndpoint;
+
+    // Initialize the GeminiProxy instance
+    geminiProxy = DirectGeminiProxy(geminiEndpoint, geminiApiKey);
+
+    // Initialize the GeminiProxy instance
+    openaiProxy = DirectOpenAiProxy("", openaiApiKey);
+
+     */
+    String? idToken = await getUserAccessToken();
+    if(idToken != null) {
+      String geminiProxyEp = apiKeyManager.geminiProxyEndpoint;
+      String openaiProxyEp = apiKeyManager.openaiProxyEndpoint;
+      // Initialize the GeminiProxy instance
+      geminiProxy = CloudFunctionGeminiProxy(geminiProxyEp, idToken);
+
+      // Initialize the GeminiProxy instance
+      openaiProxy = CloudFunctionOpenAiProxy(openaiProxyEp, idToken);
+
+    }
+  }
+
+  Future<String?> getUserAccessToken() async {
+    // Assuming you are using FirebaseAuth to manage authentication
+    final User? user = FirebaseAuth.instance.currentUser;
+    return user?.getIdToken(); // Fetches the Firebase ID token of the user
   }
 
   // Dispose the controller when the widget is removed from the tree.
@@ -254,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => SketchScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
+                    builder: (context) => SketchScreen(geminiProxy: geminiProxy!, openaiProxy: openaiProxy),
                   ),
                 );
               }),
@@ -263,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TraceScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
+                    builder: (context) => TraceScreen(geminiProxy: geminiProxy!, openaiProxy: openaiProxy),
                   ),
                 );
               }),
@@ -272,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ImagenScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
+                    builder: (context) => ImagenScreen(geminiProxy: geminiProxy!, openaiProxy: openaiProxy),
                   ),
                 );
               }),
