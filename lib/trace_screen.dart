@@ -28,9 +28,9 @@ import 'utils/openai_proxy.dart'; // Import OpenAIProxy
 // StatefulWidget to handle the Trace Screen UI and functionality.
 class TraceScreen extends StatefulWidget {
   final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
+  final OpenAiProxy? openaiProxy;
 
-  const TraceScreen({super.key, required this.geminiProxy, required this.openaiProxy});
+  const TraceScreen({super.key, required this.geminiProxy, this.openaiProxy});
   
   @override
   _TraceScreenState createState() => _TraceScreenState();
@@ -135,7 +135,7 @@ class _TraceScreenState extends State<TraceScreen>
     // OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
     _initAnimation();
-    _isOpenaiAvailable = widget.openaiProxy.apiKey != null;
+    _isOpenaiAvailable = widget.openaiProxy != null;
   }
 
   // Dispose resources when the widget is removed from the tree.
@@ -902,7 +902,7 @@ class _TraceScreenState extends State<TraceScreen>
           Log.d("Response from model: $responseText");
           // Generate an image from a text prompt
           try {
-            final imageResponse = await widget.openaiProxy.process(
+            final imageResponse = await widget.openaiProxy!.process(
               'dall-e-2', responseText, OpenAIImageSize.size1024);
 
             if (imageResponse.data.isNotEmpty) {

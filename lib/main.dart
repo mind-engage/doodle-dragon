@@ -57,19 +57,16 @@ class DoodleDragon extends StatelessWidget {
   static Future<DoodleDragon> initialize() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final apiKeyManager = await APIKeyManager.getInstance();
-    // Get Gemini API keys and endpoint from SharedPreferences or .env
-    //String geminiApiKey = prefs.getString('GEMINI_API_KEY') ?? dotenv.env['GEMINI_API_KEY'] ?? '';
-    //String geminiEndpoint = prefs.getString('GEMINI_ENDPOINT') ?? dotenv.env['GEMINI_ENDPOINT'] ?? '';
 
     String geminiApiKey = apiKeyManager.geminiApiKey;
     String openaiApiKey = apiKeyManager.openaiApiKey;
     String geminiEndpoint = apiKeyManager.geminiEndpoint;
 
     // Initialize the GeminiProxy instance
-    GeminiProxy geminiProxy = GeminiProxy(geminiEndpoint, geminiApiKey);
+    GeminiProxy geminiProxy = DirectGeminiProxy(geminiEndpoint, geminiApiKey);
 
     // Initialize the GeminiProxy instance
-    OpenAiProxy openaiProxy = OpenAiProxy("", openaiApiKey);
+    OpenAiProxy openaiProxy = DirectOpenAiProxy("", openaiApiKey);
 
     return DoodleDragon(geminiProxy: geminiProxy, openaiProxy: openaiProxy);
   }

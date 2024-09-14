@@ -26,10 +26,10 @@ import 'utils/openai_proxy.dart'; // Import GeminiProxy
 // Define a StatefulWidget for handling the sketch screen with necessary dependencies.
 class SketchScreen extends StatefulWidget {
   final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
+  final OpenAiProxy? openaiProxy;
 
   // Constructor for the SketchScreen which takes required API keys.
-  const SketchScreen({super.key, required this.geminiProxy, required this.openaiProxy});
+  const SketchScreen({super.key, required this.geminiProxy, this.openaiProxy});
 
   @override
   _SketchScreenState createState() => _SketchScreenState();
@@ -121,7 +121,7 @@ class _SketchScreenState extends State<SketchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _welcomeMessage(); // Display a welcome message after the frame build is complete.
     });
-    _isOpenaiAvailable = widget.openaiProxy.apiKey != null;
+    _isOpenaiAvailable = widget.openaiProxy != null;
   }
 
   // Dispose of resources when the widget is removed from the tree.
@@ -818,7 +818,7 @@ class _SketchScreenState extends State<SketchScreen> {
           } else if (selectedMode == AiMode.sketchToImage) {
             // Generate an image from a text prompt
             try {
-              final imageResponse = await widget.openaiProxy.process('dall-e-3', responseText, OpenAIImageSize.size1024);
+              final imageResponse = await widget.openaiProxy!.process('dall-e-3', responseText, OpenAIImageSize.size1024);
 
               if (imageResponse.data.isNotEmpty) {
                 setState(() {

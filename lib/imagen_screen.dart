@@ -34,9 +34,9 @@ import 'utils/openai_proxy.dart'; // Import OpenAIProxy
 // StatefulWidget to handle the Imagen Screen UI and functionality.
 class ImagenScreen extends StatefulWidget {
   final GeminiProxy geminiProxy;
-  final OpenAiProxy openaiProxy;
+  final OpenAiProxy? openaiProxy;
 
-  const ImagenScreen({super.key, required this.geminiProxy, required this.openaiProxy});
+  const ImagenScreen({super.key, required this.geminiProxy, this.openaiProxy});
 
   @override
   _ImagenScreenState createState() => _ImagenScreenState();
@@ -132,7 +132,7 @@ class _ImagenScreenState extends State<ImagenScreen>
     loadSettings();
     _initSpeech();
     _initAnimation();
-    _isOpenaiAvailable = widget.openaiProxy.apiKey != null;
+    _isOpenaiAvailable = widget.openaiProxy != null;
   }
 
   // Dispose resources when the widget is removed from the tree.
@@ -671,7 +671,7 @@ class _ImagenScreenState extends State<ImagenScreen>
           }
           // Generate an image from a text prompt
           try {
-            final imageResponse = await widget.openaiProxy.process(
+            final imageResponse = await widget.openaiProxy!.process(
               'dall-e-3', responseText, OpenAIImageSize.size1024);
 
             if (imageResponse.data.isNotEmpty) {
