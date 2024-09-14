@@ -4,7 +4,10 @@ class OpenAiProxy {
   final String endPoint;
   final String apiKey;
 
-  OpenAiProxy(this.endPoint, this.apiKey);
+  OpenAiProxy(this.endPoint, this.apiKey){
+    // Set the OpenAI API key here
+    OpenAI.apiKey = apiKey;
+  }
 
   Future<OpenAIImageModel> process(String model, String prompt, OpenAIImageSize size) async {
     final imageResponse = await OpenAI.instance.image.create(

@@ -19,15 +19,19 @@ import "../utils/sketch_painter_v3.dart";
 import '../utils/log.dart';
 import "../ai_prompts/trace_prompts.dart";
 import 'utils/child_skill_levels.dart';
-import 'utils/api_key_manager.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
+import 'utils/gemini_proxy.dart'; // Import GeminiProxy
+import 'utils/openai_proxy.dart'; // Import OpenAIProxy
 
 // StatefulWidget to handle the Trace Screen UI and functionality.
 class TraceScreen extends StatefulWidget {
-  const TraceScreen({super.key});
+  final GeminiProxy geminiProxy;
+  final OpenAiProxy openaiProxy;
 
+  const TraceScreen({super.key, required this.geminiProxy, required this.openaiProxy});
+  
   @override
   _TraceScreenState createState() => _TraceScreenState();
 }
@@ -35,10 +39,7 @@ class TraceScreen extends StatefulWidget {
 // State class for TraceScreen with additional functionality from SingleTickerProviderStateMixin for animations.
 class _TraceScreenState extends State<TraceScreen>
     with SingleTickerProviderStateMixin {
-  late String geminiApiKey;
-  late String openaiApiKey;
-  bool _isOpenaiAvailble = false;
-  late String geminiEndpoint;
+  bool _isOpenaiAvailable = false;
 
   List<SketchPath> paths = [];
   SketchPath? currentPath;
@@ -130,11 +131,11 @@ class _TraceScreenState extends State<TraceScreen>
   @override
   void initState() {
     super.initState();
-    _initializeKeys();
     loadSettings();
     // OpenAI.apiKey = widget.openaiApiKey;
     _initSpeech();
     _initAnimation();
+    _isOpenaiAvailable = widget.openaiProxy.apiKey != null;
   }
 
   // Dispose resources when the widget is removed from the tree.
@@ -148,18 +149,7 @@ class _TraceScreenState extends State<TraceScreen>
     ttsHelper.stop();
     super.dispose();
   }
-
-  Future<void> _initializeKeys() async {
-    final apiKeyManager = await APIKeyManager.getInstance();
-    setState(() {
-      geminiApiKey = apiKeyManager.geminiApiKey;
-      openaiApiKey = apiKeyManager.openaiApiKey;
-      geminiEndpoint = apiKeyManager.geminiEndpoint;
-    });
-    OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
-    _isOpenaiAvailble = openaiApiKey.isNotEmpty;
-  }
-
+  
   // Load settings from shared preferences and welcome the user.
   Future<void> loadSettings() async {
     prefs = await SharedPreferences.getInstance();
@@ -406,7 +396,7 @@ class _TraceScreenState extends State<TraceScreen>
                     tooltip: 'Load Image',
                   ),
                 ),
-                _isOpenaiAvailble
+                _isOpenaiAvailable
                     ? Flexible(
                         child: IconButton(
                           icon: Image.asset("assets/imagen_square.png",
@@ -850,11 +840,7 @@ class _TraceScreenState extends State<TraceScreen>
         ]
       });
 
-      var response = await http.post(
-        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonBody,
-      );
+      var response = await widget.geminiProxy.process(jsonBody);
 
       if (response.statusCode == 200) {
         Map<String, dynamic> decodedResponse = jsonDecode(response.body);
@@ -906,11 +892,7 @@ class _TraceScreenState extends State<TraceScreen>
         ]
       });
 
-      var response = await http.post(
-        Uri.parse('$geminiEndpoint?key=$geminiApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonBody,
-      );
+      var response = await widget.geminiProxy.process(jsonBody);
 
       if (response.statusCode == 200) {
         Map<String, dynamic> decodedResponse = jsonDecode(response.body);
@@ -920,13 +902,8 @@ class _TraceScreenState extends State<TraceScreen>
           Log.d("Response from model: $responseText");
           // Generate an image from a text prompt
           try {
-            final imageResponse = await OpenAI.instance.image.create(
-              model: 'dall-e-2',
-              prompt: responseText,
-              n: 1,
-              size: OpenAIImageSize.size1024,
-              responseFormat: OpenAIImageResponseFormat.b64Json,
-            );
+            final imageResponse = await widget.openaiProxy.process(
+              'dall-e-2', responseText, OpenAIImageSize.size1024);
 
             if (imageResponse.data.isNotEmpty) {
               setState(() {

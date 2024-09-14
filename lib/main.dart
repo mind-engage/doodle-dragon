@@ -266,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TraceScreen(),
+                    builder: (context) => TraceScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
                   ),
                 );
               }),
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ImagenScreen(),
+                    builder: (context) => ImagenScreen(geminiProxy: widget.geminiProxy, openaiProxy: widget.openaiProxy),
                   ),
                 );
               }),

@@ -19,7 +19,6 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import "ai_prompts/sketch_prompts.dart";
 import 'utils/child_skill_levels.dart';
-import 'utils/api_key_manager.dart';
 import 'package:flutter_quick_video_encoder/flutter_quick_video_encoder.dart';
 import 'utils/gemini_proxy.dart'; // Import GeminiProxy
 import 'utils/openai_proxy.dart'; // Import GeminiProxy
@@ -118,20 +117,11 @@ class _SketchScreenState extends State<SketchScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeKeys();
     loadSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _welcomeMessage(); // Display a welcome message after the frame build is complete.
     });
-  }
-
-  Future<void> _initializeKeys() async {
-    final apiKeyManager = await APIKeyManager.getInstance();
-    setState(() {
-      openaiApiKey = apiKeyManager.openaiApiKey;
-    });
-    OpenAI.apiKey = openaiApiKey; // Initialize OpenAI with the fetched API key.
-    _isOpenaiAvailable = openaiApiKey.isNotEmpty;
+    _isOpenaiAvailable = widget.openaiProxy.apiKey != null;
   }
 
   // Dispose of resources when the widget is removed from the tree.
