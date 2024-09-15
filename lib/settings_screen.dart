@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'utils/child_skill_levels.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Define a StatefulWidget to handle the settings screen of the app
 class SettingsScreen extends StatefulWidget {
@@ -23,12 +24,15 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   bool _isLoading = true; // Boolean to handle display of loading spinner
   String geminiApiKey = ""; // Store Gemini API key
   String openaiApiKey = ""; // Store OpenAI API key
-
+  bool isUserKey = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    String serviceType = dotenv.get('SERVICE_TYPE', fallback: "AppKey");
+    isUserKey = serviceType == "UserKey";
+    _tabController = TabController(length: isUserKey ? 2 : 1, vsync: this);
+
     loadSettings();
   }
 
@@ -71,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           controller: _tabController,
           tabs: [
             Tab(text: 'General'),
-            Tab(text: 'API Keys'),
+            if (isUserKey) Tab(text: 'API Keys'),
           ],
         ),
       ),
@@ -79,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         controller: _tabController,
         children: [
           buildGeneralSettings(),
-          buildApiKeysSettings(),
+          if(isUserKey)  buildApiKeysSettings(),
         ],
       ),
     );

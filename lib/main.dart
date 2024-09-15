@@ -118,7 +118,13 @@ class _SignInScreenState extends State<SignInScreen> {
     );
 
     // Once signed in, return the UserCredential
-    return await FirebaseAuth.instance.signInWithCredential(credential);
+    //return await FirebaseAuth.instance.signInWithCredential(credential);
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    if(userCredential.user != null) {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeScreen()));
+    }
+    return userCredential;
   }
 
   // Function to handle Apple Sign-In (iOS only)
@@ -145,24 +151,84 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign In'),
+        title: Text('Doodle Dragon!'),
+        backgroundColor: Color(0xFFF37335), // Matching orange
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Google Sign-In button
-            ElevatedButton(
-              onPressed: signInWithGoogle,
-              child: Text('Sign in with Google'),
-            ),
-            SizedBox(height: 20),
-            // Apple Sign-In button (iOS only)
-            if (Theme.of(context).platform == TargetPlatform.iOS)
-              SignInWithAppleButton(
-                onPressed: signInWithApple,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            // Adjusted gradient colors
+            colors: [Color(0xFFFDBE33), Color(0xFFF87B30)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/doodle_dragon_logo.png', height: 150),
+              SizedBox(height: 20),
+
+              Text(
+                'Welcome to Doodle Dragon!',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'ComicSansMS',
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 5.0,
+                      color: Colors.black.withOpacity(0.5),
+                      offset: Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
               ),
-          ],
+              SizedBox(height: 10), // Reduced spacing
+
+              Text(
+                'Unleash your creativity!', // Added tagline
+                style: TextStyle(
+                  fontSize: 18,
+                  fontFamily: 'ComicSansMS',
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 30), // Adjusted spacing
+
+              ElevatedButton.icon(
+                onPressed: signInWithGoogle,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 10),
+                  textStyle: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[700],
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                    BorderRadius.circular(10), // More rounded corners
+                  ),
+                ),
+                icon: Padding(
+                  padding: EdgeInsets.only(right: 8.0),
+                  child: Icon(Icons.arrow_forward,
+                      color: Colors.grey[700]),
+                ),
+                label: Text('Sign in with Google'),
+              ),
+              SizedBox(height: 20),
+              // Apple Sign-In button (iOS only)
+              if (Theme.of(context).platform ==
+                  TargetPlatform.iOS)
+                SignInWithAppleButton(
+                  onPressed: signInWithApple,
+                ),
+            ],
+          ),
         ),
       ),
     );
