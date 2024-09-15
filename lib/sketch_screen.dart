@@ -818,8 +818,8 @@ class _SketchScreenState extends State<SketchScreen> {
           } else if (selectedMode == AiMode.sketchToImage) {
             // Generate an image from a text prompt
             try {
-              //final imageResponse = await widget.openaiProxy!.process('dall-e-3', responseText, OpenAIImageSize.size1024);
-              final imageResponse = await widget.openaiProxy!.process('dall-e-2', responseText, OpenAIImageSize.size256);
+              final imageResponse = await widget.openaiProxy!.process('dall-e-3', responseText, OpenAIImageSize.size1024);
+              //final imageResponse = await widget.openaiProxy!.process('dall-e-2', responseText, OpenAIImageSize.size256);
               if (imageResponse.data.isNotEmpty) {
                 setState(() {
                   Uint8List bytesImage = base64Decode(imageResponse.data.first

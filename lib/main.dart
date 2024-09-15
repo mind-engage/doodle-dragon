@@ -42,9 +42,9 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  if (kDebugMode) {
-    FirebaseAuth.instance.useAuthEmulator("192.168.0.140", 9099);
-  }
+  //if (kDebugMode) {
+  //  FirebaseAuth.instance.useAuthEmulator("192.168.0.140", 9099);
+  //}
   // Run the application after initializing it.
   runApp(await DoodleDragon.initialize());
 }
@@ -231,6 +231,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return user?.getIdToken(); // Fetches the Firebase ID token of the user
   }
 
+  Future<void> _signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => SignInScreen()));
+    } catch (e) {
+      // Handle errors or notify user
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e'))
+      );
+    }
+  }
+
   // Dispose the controller when the widget is removed from the tree.
   @override
   void dispose() {
@@ -252,6 +264,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               context,
               MaterialPageRoute(builder: (context) => SettingsScreen()),
             ),
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _signOut,
           ),
         ],
       ),
