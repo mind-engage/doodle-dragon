@@ -50,6 +50,27 @@ The app can be customized through the settings screen:
     * **Gemini API Key:** Your Google Gemini API key.
     * **OpenAI API Key:** Your OpenAI API key (optional).
 
+* **Set Up Firebase Authentication:**
+
+    * Go to the Firebase Console and create a new project.
+    * Add your app to the Firebase project and download the google-services.json file.
+    * Place the google-services.json file in the android/app directory.
+    * Enable the sign-in methods you intend to use (e.g., Google, Apple) in the Firebase Console under Authentication.
+
+* **Generate Firebase Configuration File:**
+
+    * Install the flutterfire_cli tool using dart pub global activate flutterfire_cli.
+    * Run flutterfire configure in your project directory. This will generate a lib/firebase_options    * dart file automatically based on your Firebase project settings.
+
+* **Setting Up Firebase Cloud Functions:**
+
+    * Install Firebase CLI and login with firebase login.
+    * Initialize Firebase functions in your project with firebase init functions.
+    * Install dependencies in your functions directory with npm install firebase-functions@latest    * firebase-admin@latest openai axios.
+    * Place the provided JavaScript code for Cloud Functions into index.js.
+    * Deploy functions using firebase deploy --only functions.
+    * Set up API key secrets for secure storage and access.
+
 ### Future Enhancements
 * **User Accounts:** Allow multiple children to save their drawings and progress.
 * **Offline Mode:** Explore options for limited offline functionality.
