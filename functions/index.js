@@ -41,9 +41,9 @@ exports.initNewUser = functions.auth.user().onCreate((user) => {
   const newUser = {
     uid: user.uid,
     totalTokensConsumed: 0,
-    totalTokenLimit: 1000,  // Default limit for text tokens
+    totalTokenLimit: 1000000,  // Default limit for text tokens
     imageTokensConsumed: 0,
-    imageTotalTokenLimit: 100  // Default limit for image tokens
+    imageTotalTokenLimit: 4  // Default limit for image tokens
   };
 
   // Add the new user to Firestore with the default settings
@@ -137,7 +137,7 @@ exports.proxyOpenAI = onRequest({ cors: true, secrets: [OPENAI_API_KEY] }, async
         });
 
         // Send the response from the OpenAI API
-        res.json(response.data);
+        res.json(response);
     } catch (error) {
         console.error('Error in OpenAI request:', error);
         res.status(500).json({ error: 'Failed to contact OpenAI API' });

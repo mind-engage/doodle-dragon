@@ -8,11 +8,13 @@ class APIKeyManager {
   final String geminiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';  // Static endpoint for Gemini API
   late String openaiProxyEndpoint;
   late String geminiProxyEndpoint;
+  late String serviceType;
 
   APIKeyManager._({required this.geminiApiKey,
     required this.openaiApiKey,
     required this.openaiProxyEndpoint,
-    required this.geminiProxyEndpoint});
+    required this.geminiProxyEndpoint,
+    required this.serviceType});
 
   static Future<APIKeyManager> getInstance() async {
     if (_instance == null) {
@@ -40,7 +42,8 @@ class APIKeyManager {
         }
       }
       _instance = APIKeyManager._(geminiApiKey: geminiKey, openaiApiKey: openaiKey,
-          openaiProxyEndpoint: openaiProxyEndpoint, geminiProxyEndpoint: geminiProxyEndpoint);
+          openaiProxyEndpoint: openaiProxyEndpoint, geminiProxyEndpoint: geminiProxyEndpoint,
+          serviceType: serviceType);
     }
     return _instance!;
   }

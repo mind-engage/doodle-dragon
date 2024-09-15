@@ -1,4 +1,5 @@
 // Import necessary Flutter and third-party packages.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -41,6 +42,9 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  if (kDebugMode) {
+    FirebaseAuth.instance.useAuthEmulator("192.168.0.140", 9099);
+  }
   // Run the application after initializing it.
   runApp(await DoodleDragon.initialize());
 }
@@ -197,28 +201,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> initializeApi() async {
     final apiKeyManager = await APIKeyManager.getInstance();
-    /*
-    String geminiApiKey = apiKeyManager.geminiApiKey;
-    String openaiApiKey = apiKeyManager.openaiApiKey;
-    String geminiEndpoint = apiKeyManager.geminiEndpoint;
-
-    // Initialize the GeminiProxy instance
-    geminiProxy = DirectGeminiProxy(geminiEndpoint, geminiApiKey);
-
-    // Initialize the GeminiProxy instance
-    openaiProxy = DirectOpenAiProxy("", openaiApiKey);
-
-     */
-    String? idToken = await getUserAccessToken();
-    if(idToken != null) {
-      String geminiProxyEp = apiKeyManager.geminiProxyEndpoint;
-      String openaiProxyEp = apiKeyManager.openaiProxyEndpoint;
-      // Initialize the GeminiProxy instance
-      geminiProxy = CloudFunctionGeminiProxy(geminiProxyEp, idToken);
+    if (apiKeyManager.serviceType == "AppKey" || apiKeyManager.serviceType == "UserKey") {
+      String geminiApiKey = apiKeyManager.geminiApiKey;
+      String openaiApiKey = apiKeyManager.openaiApiKey;
+      String geminiEndpoint = apiKeyManager.geminiEndpoint;
 
       // Initialize the GeminiProxy instance
-      openaiProxy = CloudFunctionOpenAiProxy(openaiProxyEp, idToken);
+      geminiProxy = DirectGeminiProxy(geminiEndpoint, geminiApiKey);
 
+      // Initialize the GeminiProxy instance
+      openaiProxy = DirectOpenAiProxy("", openaiApiKey);
+    } else if (apiKeyManager.serviceType == "ProxyApi") {
+      String? idToken = await getUserAccessToken();
+      if (idToken != null) {
+        String geminiProxyEp = apiKeyManager.geminiProxyEndpoint;
+        String openaiProxyEp = apiKeyManager.openaiProxyEndpoint;
+        // Initialize the GeminiProxy instance
+        geminiProxy = CloudFunctionGeminiProxy(geminiProxyEp, idToken);
+
+        // Initialize the GeminiProxy instance
+        openaiProxy = CloudFunctionOpenAiProxy(openaiProxyEp, idToken);
+      }
     }
   }
 
